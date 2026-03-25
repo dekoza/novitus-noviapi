@@ -1,5 +1,7 @@
 # novitus-noviapi
 
+[![PyPI version](https://img.shields.io/pypi/v/novitus-noviapi.svg)](https://pypi.org/project/novitus-noviapi/) [![CI](https://github.com/dekoza/novitus-noviapi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dekoza/novitus-noviapi/actions/workflows/ci.yml) [![Python versions](https://img.shields.io/pypi/pyversions/novitus-noviapi.svg)](https://pypi.org/project/novitus-noviapi/) [![License](https://img.shields.io/pypi/l/novitus-noviapi.svg)](https://pypi.org/project/novitus-noviapi/) [![PEP 561](https://img.shields.io/badge/PEP%20561-typed-blue.svg)](https://peps.python.org/pep-0561/)
+
 Python client library for the Novitus NoviAPI fiscal printer REST API.
 
 `novitus-noviapi` is the package name on PyPI. Import it as `noviapi`.
@@ -131,8 +133,11 @@ notes, and recommended execution procedure.
 
 ## Status
 
-The project currently ships a rebuilt standalone core package with strict
-models, explicit endpoint coverage, contract tests, and lean release artifacts.
-Hardware acceptance tests and additional release automation are still planned.
+This library started as one part of a larger project and was later extracted
+into a standalone open-source package. It currently ships strict models,
+explicit endpoint coverage, contract tests, and lean release artifacts, while
+hardware acceptance tests and additional release automation are still planned.
 
-Thank you to Novitus for lending a development kit for this work.
+The extraction and open-source work was sponsored by
+[Diablaq](https://diablaq.com/), and Novitus provided a development kit for
+the project.

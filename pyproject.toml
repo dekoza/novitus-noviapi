@@ -32,6 +32,8 @@ dependencies = [
 [project.urls]
 Homepage = "https://noviapi.novitus.pl/"
 Documentation = "https://noviapi.novitus.pl/"
+Repository = "https://github.com/dekoza/novitus-noviapi"
+Issues = "https://github.com/dekoza/novitus-noviapi/issues"
 
 [dependency-groups]
 dev = [
