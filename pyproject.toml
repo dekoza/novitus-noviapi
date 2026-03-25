@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling>=1.27,<2.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "novitus-noviapi"
+dynamic = ["version"]
+description = "Python client library for the Novitus NoviAPI fiscal printer REST API."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+license-files = ["LICENSE"]
+keywords = ["novitus", "noviapi", "fiscal-printer", "printer", "pos"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+  "anyio>=4.9,<5.0",
+  "httpx>=0.28,<1.0",
+  "pydantic>=2.11,<3.0",
+]
+
+[project.urls]
+Homepage = "https://noviapi.novitus.pl/"
+Documentation = "https://noviapi.novitus.pl/"
+
+[dependency-groups]
+dev = [
+  "pre-commit>=4.2,<5.0",
+  "pytest>=8.4,<9.0",
+  "ruff>=0.11.0,<0.12.0",
+  "uvloop>=0.21,<1.0; platform_python_implementation == 'CPython' and sys_platform != 'win32'",
+]
+
+[tool.hatch.version]
+path = "src/noviapi/__init__.py"
+
+[tool.hatch.build]
+skip-excluded-dirs = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/noviapi"]
+only-packages = true
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src/noviapi", "pyproject.toml", "LICENSE", "README.md"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+anyio_mode = "auto"
+markers = [
+  "hardware: requires a real Novitus fiscal printer",
+  "hardware_stateful: enqueues or confirms live printer work",
+]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 79
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.format]
+quote-style = "single"

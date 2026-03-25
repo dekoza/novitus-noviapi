@@ -1,0 +1,12 @@
+.venv/
+.python-version
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+dist/
+build/
+*.egg-info/
+.coverage
+coverage.xml
+uv.lock
