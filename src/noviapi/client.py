@@ -536,8 +536,10 @@ class NoviApiClient(_SyncRequestMixin):
         transport: httpx.BaseTransport | None = None,
         trust_env: bool = False,
     ) -> None:
+        normalized_base_url = _normalize_base_url(base_url)
+        self._root_url = normalized_base_url
         self._client = httpx.Client(
-            base_url=_normalize_base_url(base_url),
+            base_url=normalized_base_url,
             timeout=timeout,
             verify=verify,
             transport=transport,
@@ -556,7 +558,7 @@ class NoviApiClient(_SyncRequestMixin):
         self.close()
 
     def comm_test(self) -> bool:
-        response = self._request('GET', '/', require_auth=False)
+        response = self._request('GET', self._root_url, require_auth=False)
         return response.status_code == 200
 
     def token_get(self) -> TokenResponse:
@@ -785,8 +787,10 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
         transport: httpx.AsyncBaseTransport | None = None,
         trust_env: bool = False,
     ) -> None:
+        normalized_base_url = _normalize_base_url(base_url)
+        self._root_url = normalized_base_url
         self._client = httpx.AsyncClient(
-            base_url=_normalize_base_url(base_url),
+            base_url=normalized_base_url,
             timeout=timeout,
             verify=verify,
             transport=transport,
@@ -805,7 +809,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
         await self.aclose()
 
     async def comm_test(self) -> bool:
-        response = await self._request('GET', '/', require_auth=False)
+        response = await self._request('GET', self._root_url, require_auth=False)
         return response.status_code == 200
 
     async def token_get(self) -> TokenResponse:

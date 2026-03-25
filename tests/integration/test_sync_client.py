@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
+import json
 
 import httpx
 import pytest
@@ -124,7 +125,7 @@ def test_sync_client_comm_test_does_not_trigger_token_fetch() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal token_calls
-        if request.url.path in {'/api/v1', '/api/v1/'} and request.method == 'GET':
+        if request.url.path == '/api/v1' and request.method == 'GET':
             assert 'Authorization' not in request.headers
             return httpx.Response(200, request=request)
         if request.url.path == '/api/v1/token':
@@ -144,7 +145,7 @@ def test_sync_client_comm_test_does_not_trigger_token_fetch() -> None:
 
 def test_sync_client_comm_test_returns_false_for_redirect() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.path in {'/api/v1', '/api/v1/'} and request.method == 'GET':
+        if request.url.path == '/api/v1' and request.method == 'GET':
             return httpx.Response(
                 307,
                 headers={'Location': 'https://printer.test/elsewhere'},
@@ -155,6 +156,100 @@ def test_sync_client_comm_test_returns_false_for_redirect() -> None:
     transport = httpx.MockTransport(handler)
     with NoviApiClient('https://printer.test/api/v1/', transport=transport) as client:
         assert client.comm_test() is False
+
+
+@pytest.mark.parametrize('base_url', ['https://printer.test', 'https://printer.test/'])
+def test_sync_client_normalizes_root_base_url_for_comm_test_and_queue(
+    base_url: str,
+) -> None:
+    seen_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_paths.append(request.url.path)
+        if request.url.path == '/api/v1' and request.method == 'GET':
+            return httpx.Response(200, request=request)
+        if request.url.path == '/api/v1/token' and request.method == 'GET':
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
+        if request.url.path == '/api/v1/queue' and request.method == 'GET':
+            return httpx.Response(200, json={'requests_in_queue': 3}, request=request)
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
+
+    transport = httpx.MockTransport(handler)
+    with NoviApiClient(base_url, transport=transport) as client:
+        assert client.comm_test() is True
+        queue_status = client.queue_check()
+
+    assert queue_status.requests_in_queue == 3
+    assert seen_paths == ['/api/v1', '/api/v1/token', '/api/v1/queue']
+
+
+def test_sync_client_supports_non_fiscal_printout_flow() -> None:
+    request_id = 'f' * 32
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == '/api/v1/token' and request.method == 'GET':
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
+        if request.url.path == '/api/v1/nf_printout' and request.method == 'POST':
+            payload = json.loads(request.content)
+            assert set(payload) == {'printout'}
+            assert payload['printout']['lines'][0]['textline']['text'] == (
+                'Greetings from the test suite!'
+            )
+            assert payload['printout']['lines'][0]['textline']['masked'] is False
+            return httpx.Response(
+                201,
+                json={'request': {'status': 'STORED', 'id': request_id}},
+                request=request,
+            )
+        if (
+            request.url.path == f'/api/v1/nf_printout/{request_id}'
+            and request.method == 'PUT'
+        ):
+            return httpx.Response(
+                200,
+                json={'request': {'status': 'CONFIRMED', 'id': request_id}},
+                request=request,
+            )
+        if (
+            request.url.path == f'/api/v1/nf_printout/{request_id}'
+            and request.method == 'GET'
+        ):
+            assert request.url.params['timeout'] == '30000'
+            return httpx.Response(
+                200,
+                json={
+                    'device': {'status': 'OK'},
+                    'request': {'status': 'DONE'},
+                },
+                request=request,
+            )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
+
+    transport = httpx.MockTransport(handler)
+    with NoviApiClient('https://printer.test/api/v1/', transport=transport) as client:
+        created = client.nf_printout_send(
+            NonFiscal(
+                lines=[
+                    PrintLine(
+                        textline=TextLine(
+                            text='Greetings from the test suite!',
+                            masked=False,
+                        )
+                    )
+                ]
+            )
+        )
+        confirmed = client.nf_printout_confirm(created.request.id)
+        checked = client.nf_printout_check(created.request.id, timeout=30_000)
+
+    assert created.request.status == 'STORED'
+    assert created.request.id == request_id
+    assert confirmed.request.status == 'CONFIRMED'
+    assert confirmed.request.id == request_id
+    assert checked.request.id is None
+    assert checked.request.status == 'DONE'
+    assert checked.request.error is None
+    assert checked.device.status == 'OK'
 
 
 def test_sync_client_rejects_receipt_check_payload_from_other_endpoint() -> None:

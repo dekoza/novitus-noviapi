@@ -212,6 +212,19 @@ def test_check_response_parses_status_payload_variants() -> None:
     assert response.request.response.status.device.tax_rates[0].name == 'A'
 
 
+def test_check_response_allows_done_status_without_request_id() -> None:
+    response = CheckResponse.model_validate(
+        {
+            'device': {'status': 'OK'},
+            'request': {'status': 'DONE', 'jpkid': 132},
+        }
+    )
+
+    assert response.request.status == 'DONE'
+    assert response.request.id is None
+    assert response.request.jpkid == 132
+
+
 def test_error_envelope_preserves_validation_errors_and_refresh_date() -> None:
     envelope = ErrorEnvelope.model_validate(
         {

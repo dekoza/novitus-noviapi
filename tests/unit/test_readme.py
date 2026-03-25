@@ -11,6 +11,8 @@ def test_readme_covers_async_auth_errors_and_hardware_section() -> None:
 
     assert '## Async quick start' in readme
     assert 'NoviApiAsyncClient' in readme
+    assert "NoviApiClient('http://127.0.0.1:8888/api/v1')" in readme
+    assert "NoviApiAsyncClient('http://127.0.0.1:8888/api/v1')" in readme
     assert 'await client.comm_test()' in readme
     assert 'if not await client.comm_test()' in readme
     assert '## Authentication' in readme
@@ -29,6 +31,9 @@ def test_readme_covers_async_auth_errors_and_hardware_section() -> None:
     assert '## Hardware testing' in readme
     assert '--run-hardware' in readme
     assert 'NOVIAPI_BASE_URL' in readme
+    assert 'export NOVIAPI_BASE_URL="http://192.168.1.50:8888/api/v1"' in readme
+    assert 'non-fiscal printout' in readme
+    assert 'Greetings from the test suite!' in readme
     assert 'points either at the printer root' in readme
     assert 'rejects ambiguous subpaths' in readme
     assert (

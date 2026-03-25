@@ -22,7 +22,9 @@ def test_hardware_guide_covers_requirements_and_execution_steps() -> None:
     assert 'NoviAPI service reachable over HTTP' in guide
     assert 'NOVIAPI_BASE_URL' in guide
     assert 'either the printer root' in guide
+    assert '`http://192.168.1.50:8888/api/v1`' in guide
     assert 'normalized to `/api/v1` automatically' in guide
+    assert 'trailing slash after `/api/v1` is also accepted' in guide
     assert '--run-hardware' in guide
     assert 'uv run pytest tests/hardware -m hardware --run-hardware' in guide
     assert '--run-hardware-stateful' in guide
@@ -31,6 +33,14 @@ def test_hardware_guide_covers_requirements_and_execution_steps() -> None:
     assert 'status_send' in guide
     assert 'status_confirm' in guide
     assert 'status_check' in guide
+    assert 'nf_printout_send' in guide
+    assert 'nf_printout_confirm' in guide
+    assert 'nf_printout_check' in guide
+    assert 'Greetings from the test suite!' in guide
+    assert 'PENDING' in guide
+    assert 'QUEUED' in guide
+    assert 'up to three' in guide
+    assert 'attempts total' in guide
     assert 'milliseconds' in guide
     assert '30_000' in guide
     assert 'Run the full hardware suite' not in guide

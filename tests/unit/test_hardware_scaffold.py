@@ -9,6 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 HARDWARE_TEST_PATH = PROJECT_ROOT / 'tests' / 'hardware' / 'test_comm_test.py'
 QUEUE_TEST_PATH = PROJECT_ROOT / 'tests' / 'hardware' / 'test_queue_status.py'
 STATUS_TEST_PATH = PROJECT_ROOT / 'tests' / 'hardware' / 'test_status_flow.py'
+NF_PRINTOUT_TEST_PATH = PROJECT_ROOT / 'tests' / 'hardware' / 'test_nf_printout.py'
 PYPROJECT_PATH = PROJECT_ROOT / 'pyproject.toml'
 
 
@@ -37,9 +38,24 @@ def test_hardware_status_flow_test_exists_and_is_marked() -> None:
     assert "StatusCommand(type='device')" in hardware_test
     assert 'client.status_send' in hardware_test
     assert 'client.status_confirm' in hardware_test
+    assert 'poll_hardware_request' in hardware_test
     assert 'client.status_check' in hardware_test
     assert 'queue_before = client.queue_check()' in hardware_test
     assert 'queue_after = client.queue_check()' in hardware_test
+
+
+def test_hardware_non_fiscal_printout_test_exists_and_is_marked() -> None:
+    hardware_test = NF_PRINTOUT_TEST_PATH.read_text(encoding='utf-8')
+
+    assert '@pytest.mark.hardware' in hardware_test
+    assert '@pytest.mark.hardware_stateful' in hardware_test
+    assert 'def test_hardware_nf_printout_flow' in hardware_test
+    assert 'Greetings from the test suite!' in hardware_test
+    assert 'NonFiscal(' in hardware_test
+    assert 'client.nf_printout_send' in hardware_test
+    assert 'client.nf_printout_confirm' in hardware_test
+    assert 'poll_hardware_request' in hardware_test
+    assert 'client.nf_printout_check' in hardware_test
 
 
 def test_pyproject_registers_stateful_hardware_marker() -> None:
@@ -125,6 +141,27 @@ def test_stateful_hardware_tests_are_skipped_without_stateful_flag() -> None:
             '-m',
             'pytest',
             'tests/hardware/test_status_flow.py',
+            '-q',
+            '--run-hardware',
+        ],
+        cwd=PROJECT_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        env=os.environ | {'NOVIAPI_BASE_URL': 'http://127.0.0.1:8888/api/v1/'},
+    )
+
+    assert result.returncode == 0
+    assert '1 skipped' in result.stdout
+
+
+def test_non_fiscal_hardware_test_is_skipped_without_stateful_flag() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            '-m',
+            'pytest',
+            'tests/hardware/test_nf_printout.py',
             '-q',
             '--run-hardware',
         ],

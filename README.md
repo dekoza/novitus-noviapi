@@ -22,7 +22,14 @@ uv add novitus-noviapi
 
 Pass an `http://` or `https://` base URL that points either at the printer root
 or directly at a path ending with `/api/v1`. The client normalizes root URLs to
-`/api/v1` and rejects ambiguous subpaths.
+`/api/v1`, strips a trailing slash from `/api/v1/`, and rejects ambiguous subpaths.
+
+```python
+from noviapi import NoviApiClient
+
+with NoviApiClient('http://127.0.0.1:8888') as client:
+    client.comm_test()
+```
 
 ## Quick start
 
@@ -32,7 +39,7 @@ from decimal import Decimal
 from noviapi import NoviApiClient
 from noviapi.models import Article, Item, Receipt, Summary
 
-client = NoviApiClient('http://127.0.0.1:8888/api/v1/')
+client = NoviApiClient('http://127.0.0.1:8888/api/v1')
 
 receipt = Receipt(
     items=[
@@ -61,7 +68,7 @@ from noviapi.exceptions import NoviApiTransportError
 
 
 async def main() -> None:
-    async with NoviApiAsyncClient('http://127.0.0.1:8888/api/v1/') as client:
+    async with NoviApiAsyncClient('http://127.0.0.1:8888/api/v1') as client:
         try:
             if not await client.comm_test():
                 raise RuntimeError('Printer returned an unexpected non-200 response')
@@ -82,7 +89,7 @@ async def main() -> None:
 ```python
 from noviapi import NoviApiClient
 
-with NoviApiClient('http://127.0.0.1:8888/api/v1/') as client:
+with NoviApiClient('http://127.0.0.1:8888/api/v1') as client:
     token = client.token_get()
     client.token_refresh(token.token)
 ```
@@ -99,7 +106,7 @@ from noviapi.exceptions import (
     TooManyTokenRequestsError,
 )
 
-with NoviApiClient('http://127.0.0.1:8888/api/v1/') as client:
+with NoviApiClient('http://127.0.0.1:8888/api/v1') as client:
     try:
         queue = client.queue_check()
     except TooManyTokenRequestsError as exc:
@@ -120,19 +127,20 @@ with NoviApiClient('http://127.0.0.1:8888/api/v1/') as client:
 ## Hardware testing
 
 Hardware tests are opt-in and intended only for development against a real
-device. The default hardware smoke test only checks `comm_test()` so the suite
-does not print fiscal documents by accident.
+device. The default hardware suite only covers `comm_test()` and `queue_check()`
+so it does not print fiscal documents by accident.
 
-The current hardware suite also covers `queue_check()` and a read-only
-`status_send()` / `status_confirm()` / `status_check()` device-status flow.
-That status flow is treated as stateful and requires an extra explicit flag.
+Optional stateful coverage includes a read-only
+`status_send()` / `status_confirm()` / `status_check()` device-status flow and a
+non-fiscal printout that prints `Greetings from the test suite!`. Those tests
+require the extra `--run-hardware-stateful` flag.
 Long-poll `timeout` parameters are forwarded in milliseconds, matching the
 NoviAPI contract.
 
 Set the printer base URL and enable the hardware test marker explicitly:
 
 ```bash
-export NOVIAPI_BASE_URL="http://192.168.1.50:8888/api/v1/"
+export NOVIAPI_BASE_URL="http://192.168.1.50:8888/api/v1"
 uv run pytest tests/hardware --run-hardware -m hardware
 ```
 
@@ -153,4 +161,4 @@ automation are still planned.
 
 The extraction and open-source work was sponsored by
 [Diablaq](https://diablaq.com/), and Novitus provided a development kit for
-the project.
+the project. Thank you!
