@@ -21,6 +21,8 @@ def test_hardware_guide_covers_requirements_and_execution_steps() -> None:
     assert 'real Novitus fiscal printer' in guide
     assert 'NoviAPI service reachable over HTTP' in guide
     assert 'NOVIAPI_BASE_URL' in guide
+    assert 'either the printer root' in guide
+    assert 'normalized to `/api/v1` automatically' in guide
     assert '--run-hardware' in guide
     assert 'uv run pytest tests/hardware -m hardware --run-hardware' in guide
     assert '--run-hardware-stateful' in guide
@@ -29,5 +31,13 @@ def test_hardware_guide_covers_requirements_and_execution_steps() -> None:
     assert 'status_send' in guide
     assert 'status_confirm' in guide
     assert 'status_check' in guide
+    assert 'milliseconds' in guide
+    assert '30_000' in guide
+    assert 'Run the full hardware suite' not in guide
+    assert 'Run the default hardware suite' in guide
+    assert (
+        'Stateful tests stay skipped unless you pass `--run-hardware-stateful`.'
+        in guide
+    )
     assert 'Do not run hardware tests against a production printer' in guide
     assert 'PYTEST_XDIST_WORKER' in guide or 'parallel' in guide

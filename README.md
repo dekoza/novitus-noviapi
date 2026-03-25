@@ -11,7 +11,7 @@ Python client library for the Novitus NoviAPI fiscal printer REST API.
 - Sync and async clients with explicit endpoint methods
 - Strict Pydantic request and response models
 - Token lifecycle handling with retry on expired tokens
-- Backend-neutral async support for asyncio, uvloop, and trio-based apps
+- Async client built on `httpx` and `anyio`
 - Offline contract tests against a frozen NoviAPI OpenAPI snapshot
 
 ## Installation
@@ -19,6 +19,10 @@ Python client library for the Novitus NoviAPI fiscal printer REST API.
 ```bash
 uv add novitus-noviapi
 ```
+
+Pass an `http://` or `https://` base URL that points either at the printer root
+or directly at a path ending with `/api/v1`. The client normalizes root URLs to
+`/api/v1` and rejects ambiguous subpaths.
 
 ## Quick start
 
@@ -53,19 +57,25 @@ client.receipt_confirm(created.request.id)
 
 ```python
 from noviapi import NoviApiAsyncClient
+from noviapi.exceptions import NoviApiTransportError
 
 
 async def main() -> None:
     async with NoviApiAsyncClient('http://127.0.0.1:8888/api/v1/') as client:
-        is_reachable = await client.comm_test()
-        if not is_reachable:
-            raise RuntimeError('Printer is not reachable')
+        try:
+            if not await client.comm_test():
+                raise RuntimeError('Printer returned an unexpected non-200 response')
+        except NoviApiTransportError:
+            raise RuntimeError('Printer is not reachable') from None
 ```
 
 ## Authentication
 
 - Most endpoint methods fetch and refresh tokens automatically.
 - `comm_test()` is the exception: it is intentionally auth-free.
+- `comm_test()` returns `True` for `200 OK`, returns `False` for unusual non-error
+  responses such as redirects, and raises on transport errors or HTTP responses
+  `>= 400`.
 - Use `token_get()` when you need to inspect or bootstrap a token explicitly.
 - Use `token_refresh()` when you need to force a refresh cycle yourself.
 
@@ -116,6 +126,8 @@ does not print fiscal documents by accident.
 The current hardware suite also covers `queue_check()` and a read-only
 `status_send()` / `status_confirm()` / `status_check()` device-status flow.
 That status flow is treated as stateful and requires an extra explicit flag.
+Long-poll `timeout` parameters are forwarded in milliseconds, matching the
+NoviAPI contract.
 
 Set the printer base URL and enable the hardware test marker explicitly:
 
@@ -135,8 +147,9 @@ notes, and recommended execution procedure.
 
 This library started as one part of a larger project and was later extracted
 into a standalone open-source package. It currently ships strict models,
-explicit endpoint coverage, contract tests, and lean release artifacts, while
-hardware acceptance tests and additional release automation are still planned.
+explicit endpoint coverage, contract tests, lean release artifacts, and a small
+hardware test suite, while broader hardware coverage and additional release
+automation are still planned.
 
 The extraction and open-source work was sponsored by
 [Diablaq](https://diablaq.com/), and Novitus provided a development kit for

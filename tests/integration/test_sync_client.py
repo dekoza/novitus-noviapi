@@ -8,7 +8,11 @@ import httpx
 import pytest
 
 from noviapi import NoviApiClient
-from noviapi.exceptions import NoviApiTransportError, TooManyTokenRequestsError
+from noviapi.exceptions import (
+    MultipleAccessError,
+    NoviApiTransportError,
+    TooManyTokenRequestsError,
+)
 from noviapi.models import (
     Article,
     Base64Payload,
@@ -138,6 +142,21 @@ def test_sync_client_comm_test_does_not_trigger_token_fetch() -> None:
     assert token_calls == 1
 
 
+def test_sync_client_comm_test_returns_false_for_redirect() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path in {'/api/v1', '/api/v1/'} and request.method == 'GET':
+            return httpx.Response(
+                307,
+                headers={'Location': 'https://printer.test/elsewhere'},
+                request=request,
+            )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
+
+    transport = httpx.MockTransport(handler)
+    with NoviApiClient('https://printer.test/api/v1/', transport=transport) as client:
+        assert client.comm_test() is False
+
+
 def test_sync_client_rejects_receipt_check_payload_from_other_endpoint() -> None:
     request_id = 'b' * 32
 
@@ -170,6 +189,102 @@ def test_sync_client_rejects_receipt_check_payload_from_other_endpoint() -> None
         pytest.raises(NoviApiTransportError),
     ):
         client.receipt_check(request_id)
+
+
+def test_sync_client_extends_read_timeout_for_check_requests() -> None:
+    request_id = 'c' * 32
+    seen_timeout: dict[str, float | None] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == '/api/v1/token':
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
+        if request.url.path == f'/api/v1/receipt/{request_id}':
+            assert request.url.params['timeout'] == '30000'
+            seen_timeout.update(request.extensions['timeout'])
+            return httpx.Response(
+                200,
+                json={
+                    'device': {'status': 'OK'},
+                    'request': {'status': 'DONE', 'id': request_id},
+                },
+                request=request,
+            )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
+
+    transport = httpx.MockTransport(handler)
+    with NoviApiClient(
+        'https://printer.test/api/v1/', timeout=5.0, transport=transport
+    ) as client:
+        response = client.receipt_check(request_id, timeout=30_000)
+
+    assert response.request.status == 'DONE'
+    assert seen_timeout == {
+        'connect': 5.0,
+        'read': 35.0,
+        'write': 5.0,
+        'pool': 5.0,
+    }
+
+
+def test_sync_client_maps_multiple_access_denied_on_confirm() -> None:
+    request_id = 'd' * 32
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == '/api/v1/token':
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
+        if request.url.path == f'/api/v1/receipt/{request_id}':
+            return httpx.Response(
+                403,
+                json={
+                    'exception': {
+                        'code': 403,
+                        'description': (
+                            'Multiple access denied. Token has been '
+                            'deleted, download a new one.'
+                        ),
+                    }
+                },
+                request=request,
+            )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
+
+    transport = httpx.MockTransport(handler)
+    with (
+        NoviApiClient('https://printer.test/api/v1/', transport=transport) as client,
+        pytest.raises(MultipleAccessError) as exc_info,
+    ):
+        client.receipt_confirm(request_id)
+
+    assert exc_info.value.status_code == 403
+
+
+def test_sync_client_maps_generic_403_to_multiple_access_error() -> None:
+    request_id = 'e' * 32
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == '/api/v1/token':
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
+        if request.url.path == f'/api/v1/receipt/{request_id}':
+            return httpx.Response(
+                403,
+                json={
+                    'exception': {
+                        'code': 403,
+                        'description': 'Multiple access denied by policy.',
+                    }
+                },
+                request=request,
+            )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
+
+    transport = httpx.MockTransport(handler)
+    with (
+        NoviApiClient('https://printer.test/api/v1/', transport=transport) as client,
+        pytest.raises(MultipleAccessError) as exc_info,
+    ):
+        client.receipt_confirm(request_id)
+
+    assert exc_info.value.status_code == 403
 
 
 @pytest.mark.parametrize(

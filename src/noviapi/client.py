@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 from datetime import UTC, datetime
 from typing import Any, TypeVar
+from urllib.parse import urlsplit, urlunsplit
 
 import anyio
 import httpx
@@ -56,14 +57,57 @@ SendModel = TypeVar(
     LockCommand,
 )
 
+CHECK_TIMEOUT_MARGIN_SECONDS = 5.0
+TOKEN_CACHE_INVARIANT_MESSAGE = (
+    'Token cache invariant violated: token marked valid but missing'
+)
+
 
 def _normalize_base_url(value: str) -> str:
-    cleaned = value.rstrip('/')
-    if cleaned.endswith('/api/v1'):
-        return cleaned
-    if '/api/v1/' in cleaned:
-        return cleaned.split('/api/v1/', 1)[0] + '/api/v1'
-    return cleaned + '/api/v1'
+    stripped = value.strip()
+    if not stripped:
+        raise ValueError('base_url must not be empty')
+
+    parsed = urlsplit(stripped)
+    if parsed.scheme not in {'http', 'https'}:
+        raise ValueError('base_url must use http or https')
+    if not parsed.netloc:
+        raise ValueError('base_url must include a host')
+    if parsed.query or parsed.fragment:
+        raise ValueError('base_url must not include a query string or fragment')
+
+    normalized_path = parsed.path.rstrip('/')
+    if normalized_path in {'', '/'}:
+        normalized_path = '/api/v1'
+    elif normalized_path.endswith('/api/v1'):
+        normalized_path = normalized_path
+    else:
+        raise ValueError("base_url path must be root or end with '/api/v1'")
+
+    return urlunsplit((parsed.scheme, parsed.netloc, normalized_path, '', ''))
+
+
+def _timeout_to_poll_timeout(timeout: httpx.Timeout | float) -> httpx.Timeout:
+    return timeout if isinstance(timeout, httpx.Timeout) else httpx.Timeout(timeout)
+
+
+def _request_timeout_for_check(
+    base_timeout: httpx.Timeout, poll_timeout_ms: int | None
+) -> httpx.Timeout | None:
+    if poll_timeout_ms is None:
+        return None
+
+    poll_timeout_seconds = (poll_timeout_ms / 1000) + CHECK_TIMEOUT_MARGIN_SECONDS
+    read_timeout = base_timeout.read
+    if read_timeout is None or read_timeout >= poll_timeout_seconds:
+        return None
+
+    return httpx.Timeout(
+        connect=base_timeout.connect,
+        read=poll_timeout_seconds,
+        write=base_timeout.write,
+        pool=base_timeout.pool,
+    )
 
 
 def _ensure_model(
@@ -119,14 +163,7 @@ def _build_response_exception(
     elif response.status_code == 401:
         exc_type = AuthenticationError
     elif response.status_code == 403:
-        if (
-            detail is not None
-            and detail.exception.description
-            and 'Multiple access denied' in detail.exception.description
-        ):
-            exc_type = MultipleAccessError
-        else:
-            exc_type = AuthenticationError
+        exc_type = MultipleAccessError
     elif response.status_code == 404:
         exc_type = NotFoundError
     elif response.status_code == 409:
@@ -195,8 +232,10 @@ class _SyncTokenProvider:
     def get_valid_token(self) -> str:
         with self._lock:
             if self._token_is_valid():
-                assert self._token is not None
-                return self._token.token
+                token = self._token
+                if token is None:
+                    raise RuntimeError(TOKEN_CACHE_INVARIANT_MESSAGE)
+                return token.token
             if self._token is None:
                 return self._request_new_token_unlocked().token
             return self._refresh_token_unlocked(self._token.token).token
@@ -261,8 +300,10 @@ class _AsyncTokenProvider:
     async def get_valid_token(self) -> str:
         async with self._lock:
             if self._token_is_valid():
-                assert self._token is not None
-                return self._token.token
+                token = self._token
+                if token is None:
+                    raise RuntimeError(TOKEN_CACHE_INVARIANT_MESSAGE)
+                return token.token
             if self._token is None:
                 return (await self._request_new_token_unlocked()).token
             return (await self._refresh_token_unlocked(self._token.token)).token
@@ -304,6 +345,10 @@ class _AsyncTokenProvider:
 class _SyncRequestMixin:
     _client: httpx.Client
     _token_provider: _SyncTokenProvider
+
+    @property
+    def _client_timeout(self) -> httpx.Timeout:
+        return _timeout_to_poll_timeout(self._client.timeout)
 
     def _send_raw(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
@@ -372,7 +417,13 @@ class _SyncRequestMixin:
         allowed_response_keys: set[str],
     ) -> CheckResponse:
         params = {'timeout': timeout} if timeout is not None else None
-        response = self._request('GET', f'{path}/{request_id}', params=params)
+        request_timeout = _request_timeout_for_check(self._client_timeout, timeout)
+        response = self._request(
+            'GET',
+            f'{path}/{request_id}',
+            params=params,
+            timeout=request_timeout,
+        )
         parsed = _validate_json_response(response, CheckResponse)
         return _validate_check_response(
             parsed, allowed_response_keys=allowed_response_keys
@@ -386,6 +437,10 @@ class _SyncRequestMixin:
 class _AsyncRequestMixin:
     _client: httpx.AsyncClient
     _token_provider: _AsyncTokenProvider
+
+    @property
+    def _client_timeout(self) -> httpx.Timeout:
+        return _timeout_to_poll_timeout(self._client.timeout)
 
     async def _send_raw(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
@@ -454,7 +509,13 @@ class _AsyncRequestMixin:
         allowed_response_keys: set[str],
     ) -> CheckResponse:
         params = {'timeout': timeout} if timeout is not None else None
-        response = await self._request('GET', f'{path}/{request_id}', params=params)
+        request_timeout = _request_timeout_for_check(self._client_timeout, timeout)
+        response = await self._request(
+            'GET',
+            f'{path}/{request_id}',
+            params=params,
+            timeout=request_timeout,
+        )
         parsed = _validate_json_response(response, CheckResponse)
         return _validate_check_response(
             parsed, allowed_response_keys=allowed_response_keys

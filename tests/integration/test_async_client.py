@@ -11,8 +11,8 @@ import pytest
 
 from noviapi import NoviApiAsyncClient
 from noviapi.exceptions import (
-    AuthenticationError,
     ConflictError,
+    MultipleAccessError,
     NoviApiTransportError,
     TooManyTokenRequestsError,
 )
@@ -123,14 +123,16 @@ async def test_async_client_retries_once_after_401() -> None:
     assert seen_tokens == ['Bearer token-1', 'Bearer token-2']
 
 
-async def test_async_client_supports_timeout_query_for_check() -> None:
+async def test_async_client_extends_read_timeout_for_check_requests() -> None:
     request_id = '2' * 32
+    seen_timeout: dict[str, float | None] = {}
 
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/v1/token':
             return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == f'/api/v1/receipt/{request_id}':
-            assert request.url.params['timeout'] == '30'
+            assert request.url.params['timeout'] == '30000'
+            seen_timeout.update(request.extensions['timeout'])
             return httpx.Response(
                 200,
                 json={
@@ -143,11 +145,17 @@ async def test_async_client_supports_timeout_query_for_check() -> None:
 
     transport = httpx.MockTransport(handler)
     async with NoviApiAsyncClient(
-        'https://printer.test/api/v1/', transport=transport
+        'https://printer.test/api/v1/', timeout=5.0, transport=transport
     ) as client:
-        response = await client.receipt_check(request_id, timeout=30)
+        response = await client.receipt_check(request_id, timeout=30_000)
 
     assert response.request.status == 'DONE'
+    assert seen_timeout == {
+        'connect': 5.0,
+        'read': 35.0,
+        'write': 5.0,
+        'pool': 5.0,
+    }
 
 
 async def test_async_client_maps_too_many_token_requests() -> None:
@@ -209,7 +217,38 @@ async def test_async_client_maps_multiple_access_denied_on_confirm() -> None:
     async with NoviApiAsyncClient(
         'https://printer.test/api/v1/', transport=transport
     ) as client:
-        with pytest.raises(AuthenticationError) as exc_info:
+        with pytest.raises(MultipleAccessError) as exc_info:
+            await client.receipt_confirm(request_id)
+
+    assert exc_info.value.status_code == 403
+
+
+async def test_async_client_maps_generic_403_to_multiple_access_error() -> None:
+    request_id = '4' * 32
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == '/api/v1/token':
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
+        if request.url.path == f'/api/v1/receipt/{request_id}':
+            return httpx.Response(
+                403,
+                json={
+                    'exception': {
+                        'code': 403,
+                        'description': (
+                            'Multiple access denied by policy. Try again later.'
+                        ),
+                    }
+                },
+                request=request,
+            )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
+
+    transport = httpx.MockTransport(handler)
+    async with NoviApiAsyncClient(
+        'https://printer.test/api/v1/', transport=transport
+    ) as client:
+        with pytest.raises(MultipleAccessError) as exc_info:
             await client.receipt_confirm(request_id)
 
     assert exc_info.value.status_code == 403
@@ -364,6 +403,23 @@ async def test_async_client_supports_queue_and_comm_test() -> None:
     assert queue_status.requests_in_queue == 7
     assert queue_delete.status == 'DELETED'
     assert token_calls == 1
+
+
+async def test_async_client_comm_test_returns_false_for_redirect() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path in {'/api/v1', '/api/v1/'} and request.method == 'GET':
+            return httpx.Response(
+                307,
+                headers={'Location': 'https://printer.test/elsewhere'},
+                request=request,
+            )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
+
+    transport = httpx.MockTransport(handler)
+    async with NoviApiAsyncClient(
+        'https://printer.test/api/v1/', transport=transport
+    ) as client:
+        assert await client.comm_test() is False
 
 
 async def test_async_client_fetches_single_token_for_concurrent_requests() -> None:

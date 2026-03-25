@@ -11,7 +11,8 @@ Do not run hardware tests against a production printer.
 - A real Novitus fiscal printer connected to a development workstation or lab
   network.
 - NoviAPI service reachable over HTTP from the machine running pytest.
-- The exact base URL for the device, including the `/api/v1/` prefix.
+- A device base URL that is either the printer root (for example
+  `http://192.168.1.50:8888`) or already ends with `/api/v1/`.
 - A development environment with project dependencies installed via `uv sync`.
 - Confidence that no other workstation is actively driving the same printer.
 
@@ -22,6 +23,8 @@ Export the base URL before running any hardware tests:
 ```bash
 export NOVIAPI_BASE_URL="http://192.168.1.50:8888/api/v1/"
 ```
+
+Root-style URLs are also accepted and normalized to `/api/v1` automatically.
 
 Then enable the hardware test gate explicitly:
 
@@ -43,7 +46,8 @@ The current hardware suite is intentionally narrow:
 - `status_send(StatusCommand(type='device'))` requests a read-only device status
   operation.
 - `status_confirm()` confirms the queued status request.
-- `status_check()` polls for the resulting device status payload.
+- `status_check()` polls for the resulting device status payload. Its `timeout`
+  argument uses milliseconds, so `timeout=30_000` means a 30-second poll.
 
 The status-flow test is treated as stateful because it enqueues and confirms a
 live request even though the requested operation is intended to be read-only.
@@ -61,11 +65,13 @@ Before starting:
 - Do not use `pytest-xdist`; hardware tests refuse `PYTEST_XDIST_WORKER`.
 - Avoid running the hardware suite in parallel from multiple shells.
 
-Run the full hardware suite:
+Run the default hardware suite:
 
 ```bash
 uv run pytest tests/hardware -m hardware --run-hardware
 ```
+
+Stateful tests stay skipped unless you pass `--run-hardware-stateful`.
 
 Run the stateful status-flow test only when you explicitly want to allow queued
 live-device work:
@@ -89,7 +95,8 @@ uv run pytest tests/hardware/test_queue_status.py -m hardware --run-hardware -x
   the device rejected token acquisition or another workstation invalidated the
   token.
 - `status_check()` timeouts usually mean the device did not finish the request
-  within the polling window or the printer is blocked by another activity.
+  within the polling window or the printer is blocked by another activity. A
+  value like `timeout=30_000` asks the device to poll for up to 30 seconds.
 - A skip on the status-flow test usually means you forgot
   `--run-hardware-stateful`.
 
