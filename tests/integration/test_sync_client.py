@@ -11,6 +11,7 @@ from noviapi import NoviApiClient
 from noviapi.exceptions import NoviApiTransportError, TooManyTokenRequestsError
 from noviapi.models import (
     Article,
+    Base64Payload,
     ConfigurationCommand,
     ConfigurationOption,
     DirectIOCommand,
@@ -59,15 +60,11 @@ def test_sync_client_retries_once_after_401() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/v1/token' and request.method == 'GET':
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == '/api/v1/token' and request.method == 'PATCH':
             assert request.content == b''
             assert request.headers['Content-Type'] == 'text/plain'
-            return httpx.Response(
-                200, json=_token_payload('token-2'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-2'), request=request)
         if request.url.path == '/api/v1/receipt' and request.method == 'POST':
             seen_tokens.append(request.headers.get('Authorization'))
             if len(seen_tokens) == 1:
@@ -86,14 +83,10 @@ def test_sync_client_retries_once_after_401() -> None:
                 json={'request': {'status': 'STORED', 'id': request_id}},
                 request=request,
             )
-        raise AssertionError(
-            f'Unexpected request {request.method} {request.url!s}'
-        )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
 
     transport = httpx.MockTransport(handler)
-    with NoviApiClient(
-        'https://printer.test/api/v1/', transport=transport
-    ) as client:
+    with NoviApiClient('https://printer.test/api/v1/', transport=transport) as client:
         response = client.receipt_send(_receipt())
 
     assert response.request.id == request_id
@@ -116,9 +109,7 @@ def test_sync_client_maps_too_many_token_requests() -> None:
 
     transport = httpx.MockTransport(handler)
     with (
-        NoviApiClient(
-            'https://printer.test/api/v1/', transport=transport
-        ) as client,
+        NoviApiClient('https://printer.test/api/v1/', transport=transport) as client,
         pytest.raises(TooManyTokenRequestsError),
     ):
         client.token_get()
@@ -129,45 +120,30 @@ def test_sync_client_comm_test_does_not_trigger_token_fetch() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal token_calls
-        if (
-            request.url.path in {'/api/v1', '/api/v1/'}
-            and request.method == 'GET'
-        ):
+        if request.url.path in {'/api/v1', '/api/v1/'} and request.method == 'GET':
             assert 'Authorization' not in request.headers
             return httpx.Response(200, request=request)
         if request.url.path == '/api/v1/token':
             token_calls += 1
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == '/api/v1/queue' and request.method == 'GET':
-            return httpx.Response(
-                200, json={'requests_in_queue': 0}, request=request
-            )
-        raise AssertionError(
-            f'Unexpected request {request.method} {request.url!s}'
-        )
+            return httpx.Response(200, json={'requests_in_queue': 0}, request=request)
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
 
     transport = httpx.MockTransport(handler)
-    with NoviApiClient(
-        'https://printer.test/api/v1/', transport=transport
-    ) as client:
+    with NoviApiClient('https://printer.test/api/v1/', transport=transport) as client:
         assert client.comm_test() is True
         client.queue_check()
 
     assert token_calls == 1
 
 
-def test_sync_client_rejects_receipt_check_payload_from_other_endpoint() -> (
-    None
-):
+def test_sync_client_rejects_receipt_check_payload_from_other_endpoint() -> None:
     request_id = 'b' * 32
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/v1/token':
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == f'/api/v1/receipt/{request_id}':
             return httpx.Response(
                 200,
@@ -186,15 +162,11 @@ def test_sync_client_rejects_receipt_check_payload_from_other_endpoint() -> (
                 },
                 request=request,
             )
-        raise AssertionError(
-            f'Unexpected request {request.method} {request.url!s}'
-        )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
 
     transport = httpx.MockTransport(handler)
     with (
-        NoviApiClient(
-            'https://printer.test/api/v1/', transport=transport
-        ) as client,
+        NoviApiClient('https://printer.test/api/v1/', transport=transport) as client,
         pytest.raises(NoviApiTransportError),
     ):
         client.receipt_check(request_id)
@@ -207,9 +179,7 @@ def test_sync_client_rejects_receipt_check_payload_from_other_endpoint() -> (
         (
             'nf_printout_send',
             lambda: NonFiscal(
-                lines=[
-                    PrintLine(textline=TextLine(text='Hello', masked=False))
-                ]
+                lines=[PrintLine(textline=TextLine(text='Hello', masked=False))]
             ),
             '/api/v1/nf_printout',
         ),
@@ -243,7 +213,7 @@ def test_sync_client_rejects_receipt_check_payload_from_other_endpoint() -> (
         ),
         (
             'direct_io_send',
-            lambda: DirectIOCommand(nov_cmd={'base64': 'AA=='}),
+            lambda: DirectIOCommand(nov_cmd=Base64Payload(base64='AA==')),
             '/api/v1/direct_io',
         ),
         (
@@ -262,9 +232,7 @@ def test_sync_client_covers_send_endpoints(
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/v1/token':
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         assert request.url.path == path
         return httpx.Response(
             201,
@@ -273,9 +241,7 @@ def test_sync_client_covers_send_endpoints(
         )
 
     transport = httpx.MockTransport(handler)
-    with NoviApiClient(
-        'https://printer.test/api/v1/', transport=transport
-    ) as client:
+    with NoviApiClient('https://printer.test/api/v1/', transport=transport) as client:
         response = getattr(client, method_name)(model_factory())
 
     assert response.request.id == request_id

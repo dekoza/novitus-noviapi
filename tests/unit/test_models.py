@@ -7,14 +7,12 @@ import pytest
 from pydantic import ValidationError
 
 from noviapi.models import (
-    ApiExceptionDetails,
     Article,
     ArticleCode,
     Base64Payload,
     CheckResponse,
     ConfigurationCommand,
     ConfigurationOption,
-    ConfigurationRange,
     Container,
     DeviceControl,
     DirectIOCommand,
@@ -67,9 +65,7 @@ def test_receipt_supports_container_variants() -> None:
         summary=Summary(total=Decimal('5.00'), pay_in=Decimal('5.00')),
     )
 
-    payload = json.loads(
-        receipt.model_dump_json(exclude_none=True, by_alias=True)
-    )
+    payload = json.loads(receipt.model_dump_json(exclude_none=True, by_alias=True))
 
     assert payload['items'][0]['container']['number'] == 7
     assert payload['items'][1]['container_return']['value'] == '2.50'
@@ -106,9 +102,11 @@ def test_configuration_requires_operation_specific_fields() -> None:
         options=[ConfigurationOption(key=1, value='x')],
     )
     ConfigurationCommand(operation='read_array', to_read=[1, 2])
-    ConfigurationCommand(
-        operation='read_range',
-        range=ConfigurationRange(from_=10, to=20),
+    ConfigurationCommand.model_validate(
+        {
+            'operation': 'read_range',
+            'range': {'from': 10, 'to': 20},
+        }
     )
     ConfigurationCommand(operation='read_all')
 
@@ -126,14 +124,12 @@ def test_non_fiscal_system_number_is_text_only() -> None:
     NonFiscal(
         lines=[PrintLine(textline=TextLine(text='Hello', masked=False))],
         system_info=NonFiscalSystemInfo(
-            system_number=NonFiscalSystemNumber(
-                print_as='text', value='SYS-1'
-            ),
+            system_number=NonFiscalSystemNumber(print_as='text', value='SYS-1'),
         ),
     )
 
     with pytest.raises(ValidationError):
-        NonFiscalSystemNumber(print_as='barcode', value='SYS-1')
+        NonFiscalSystemNumber.model_validate({'print_as': 'barcode', 'value': 'SYS-1'})
 
 
 def test_receipt_supports_qr_code_and_activity_monitor_flag() -> None:
@@ -146,9 +142,7 @@ def test_receipt_supports_qr_code_and_activity_monitor_flag() -> None:
         device_control=DeviceControl(send_to_activity_monitor=True),
     )
 
-    payload = json.loads(
-        receipt.model_dump_json(exclude_none=True, by_alias=True)
-    )
+    payload = json.loads(receipt.model_dump_json(exclude_none=True, by_alias=True))
 
     assert payload['system_info']['qr_code'] == {
         'qr_type': 1,
@@ -161,14 +155,14 @@ def test_status_command_restricts_known_status_types() -> None:
     StatusCommand(type='fiscal_memory')
 
     with pytest.raises(ValidationError):
-        StatusCommand(type='whatever')
+        StatusCommand.model_validate({'type': 'whatever'})
 
 
 def test_lock_command_requires_known_operation() -> None:
     LockCommand(operation='enable')
 
     with pytest.raises(ValidationError):
-        LockCommand(operation='lock')
+        LockCommand.model_validate({'operation': 'lock'})
 
 
 def test_check_response_parses_status_payload_variants() -> None:
@@ -219,20 +213,18 @@ def test_check_response_parses_status_payload_variants() -> None:
 
 
 def test_error_envelope_preserves_validation_errors_and_refresh_date() -> None:
-    envelope = ErrorEnvelope(
-        exception=ApiExceptionDetails(
-            code=429,
-            description='Too many token requests',
-            allowed_refresh_date='2026-03-25T12:00:00Z',
-            errors=['receipt.items.0.article.value'],
-        )
+    envelope = ErrorEnvelope.model_validate(
+        {
+            'exception': {
+                'code': 429,
+                'description': 'Too many token requests',
+                'allowed_refresh_date': '2026-03-25T12:00:00Z',
+                'errors': ['receipt.items.0.article.value'],
+            }
+        }
     )
 
-    payload = json.loads(
-        envelope.model_dump_json(exclude_none=True, by_alias=True)
-    )
+    payload = json.loads(envelope.model_dump_json(exclude_none=True, by_alias=True))
 
-    assert (
-        payload['exception']['allowed_refresh_date'] == '2026-03-25T12:00:00Z'
-    )
+    assert payload['exception']['allowed_refresh_date'] == '2026-03-25T12:00:00Z'
     assert payload['exception']['errors'] == ['receipt.items.0.article.value']

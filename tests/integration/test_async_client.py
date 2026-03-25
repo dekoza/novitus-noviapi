@@ -18,6 +18,7 @@ from noviapi.exceptions import (
 )
 from noviapi.models import (
     Article,
+    Base64Payload,
     ConfigurationCommand,
     ConfigurationOption,
     DirectIOCommand,
@@ -53,6 +54,12 @@ def _receipt() -> Receipt:
     )
 
 
+def _invoice_article_payload() -> dict[str, object]:
+    article = _receipt().items[0].article
+    assert article is not None
+    return article.model_dump(mode='json')
+
+
 def _stored_response(request_id: str) -> dict:
     return {'request': {'status': 'STORED', 'id': request_id}}
 
@@ -80,15 +87,11 @@ async def test_async_client_retries_once_after_401() -> None:
 
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/v1/token' and request.method == 'GET':
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == '/api/v1/token' and request.method == 'PATCH':
             assert request.content == b''
             assert request.headers['Content-Type'] == 'text/plain'
-            return httpx.Response(
-                200, json=_token_payload('token-2'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-2'), request=request)
         if request.url.path == '/api/v1/receipt' and request.method == 'POST':
             seen_tokens.append(request.headers.get('Authorization'))
             if len(seen_tokens) == 1:
@@ -107,9 +110,7 @@ async def test_async_client_retries_once_after_401() -> None:
             return httpx.Response(
                 201, json=_stored_response(request_id), request=request
             )
-        raise AssertionError(
-            f'Unexpected request {request.method} {request.url!s}'
-        )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
 
     transport = httpx.MockTransport(handler)
     async with NoviApiAsyncClient(
@@ -127,9 +128,7 @@ async def test_async_client_supports_timeout_query_for_check() -> None:
 
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/v1/token':
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == f'/api/v1/receipt/{request_id}':
             assert request.url.params['timeout'] == '30'
             return httpx.Response(
@@ -140,9 +139,7 @@ async def test_async_client_supports_timeout_query_for_check() -> None:
                 },
                 request=request,
             )
-        raise AssertionError(
-            f'Unexpected request {request.method} {request.url!s}'
-        )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
 
     transport = httpx.MockTransport(handler)
     async with NoviApiAsyncClient(
@@ -191,9 +188,7 @@ async def test_async_client_maps_multiple_access_denied_on_confirm() -> None:
 
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/v1/token':
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == f'/api/v1/receipt/{request_id}':
             return httpx.Response(
                 403,
@@ -208,9 +203,7 @@ async def test_async_client_maps_multiple_access_denied_on_confirm() -> None:
                 },
                 request=request,
             )
-        raise AssertionError(
-            f'Unexpected request {request.method} {request.url!s}'
-        )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
 
     transport = httpx.MockTransport(handler)
     async with NoviApiAsyncClient(
@@ -225,9 +218,7 @@ async def test_async_client_maps_multiple_access_denied_on_confirm() -> None:
 async def test_async_client_maps_daily_report_conflict() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/v1/token':
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == '/api/v1/receipt':
             return httpx.Response(
                 409,
@@ -240,9 +231,7 @@ async def test_async_client_maps_daily_report_conflict() -> None:
                 },
                 request=request,
             )
-        raise AssertionError(
-            f'Unexpected request {request.method} {request.url!s}'
-        )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
 
     transport = httpx.MockTransport(handler)
     async with NoviApiAsyncClient(
@@ -268,13 +257,7 @@ async def test_async_client_maps_daily_report_conflict() -> None:
                     'id': '1234567890',
                     'address': ['Main Street 1'],
                 },
-                'items': [
-                    {
-                        'article': _receipt()
-                        .items[0]
-                        .article.model_dump(mode='json')
-                    }
-                ],
+                'items': [{'article': _invoice_article_payload()}],
                 'summary': {'total': '10.00', 'pay_in': '10.00'},
             },
             '/api/v1/invoice',
@@ -282,9 +265,7 @@ async def test_async_client_maps_daily_report_conflict() -> None:
         (
             'nf_printout_send',
             lambda: NonFiscal(
-                lines=[
-                    PrintLine(textline=TextLine(text='Hello', masked=False))
-                ]
+                lines=[PrintLine(textline=TextLine(text='Hello', masked=False))]
             ),
             '/api/v1/nf_printout',
         ),
@@ -318,7 +299,7 @@ async def test_async_client_maps_daily_report_conflict() -> None:
         ),
         (
             'direct_io_send',
-            lambda: DirectIOCommand(nov_cmd={'base64': 'AA=='}),
+            lambda: DirectIOCommand(nov_cmd=Base64Payload(base64='AA==')),
             '/api/v1/direct_io',
         ),
         (
@@ -337,14 +318,10 @@ async def test_async_client_covers_all_send_endpoints(
 
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/v1/token':
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         assert request.url.path == path
         assert request.method == 'POST'
-        return httpx.Response(
-            201, json=_stored_response(request_id), request=request
-        )
+        return httpx.Response(201, json=_stored_response(request_id), request=request)
 
     transport = httpx.MockTransport(handler)
     async with NoviApiAsyncClient(
@@ -363,29 +340,18 @@ async def test_async_client_supports_queue_and_comm_test() -> None:
     token_calls = 0
 
     async def handler(request: httpx.Request) -> httpx.Response:
-        if (
-            request.url.path in {'/api/v1', '/api/v1/'}
-            and request.method == 'GET'
-        ):
+        if request.url.path in {'/api/v1', '/api/v1/'} and request.method == 'GET':
             assert 'Authorization' not in request.headers
             return httpx.Response(200, request=request)
         if request.url.path == '/api/v1/token':
             nonlocal token_calls
             token_calls += 1
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == '/api/v1/queue' and request.method == 'GET':
-            return httpx.Response(
-                200, json={'requests_in_queue': 7}, request=request
-            )
+            return httpx.Response(200, json={'requests_in_queue': 7}, request=request)
         if request.url.path == '/api/v1/queue' and request.method == 'DELETE':
-            return httpx.Response(
-                200, json={'status': 'DELETED'}, request=request
-            )
-        raise AssertionError(
-            f'Unexpected request {request.method} {request.url!s}'
-        )
+            return httpx.Response(200, json={'status': 'DELETED'}, request=request)
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
 
     transport = httpx.MockTransport(handler)
     async with NoviApiAsyncClient(
@@ -400,9 +366,7 @@ async def test_async_client_supports_queue_and_comm_test() -> None:
     assert token_calls == 1
 
 
-async def test_async_client_fetches_single_token_for_concurrent_requests() -> (
-    None
-):
+async def test_async_client_fetches_single_token_for_concurrent_requests() -> None:
     request_ids = ['8' * 32, '9' * 32]
     token_calls = 0
     request_calls = 0
@@ -412,9 +376,7 @@ async def test_async_client_fetches_single_token_for_concurrent_requests() -> (
         if request.url.path == '/api/v1/token':
             token_calls += 1
             await anyio.sleep(0)
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == '/api/v1/receipt':
             request_calls += 1
             return httpx.Response(
@@ -422,9 +384,7 @@ async def test_async_client_fetches_single_token_for_concurrent_requests() -> (
                 json=_stored_response(request_ids[request_calls - 1]),
                 request=request,
             )
-        raise AssertionError(
-            f'Unexpected request {request.method} {request.url!s}'
-        )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
 
     transport = httpx.MockTransport(handler)
     async with NoviApiAsyncClient(
@@ -446,16 +406,12 @@ async def test_async_client_fetches_single_token_for_concurrent_requests() -> (
     assert set(results) == set(request_ids)
 
 
-async def test_async_client_rejects_receipt_check_payload_from_other_endpoint() -> (
-    None
-):
+async def test_async_client_rejects_receipt_check_payload_from_other_endpoint() -> None:
     request_id = 'a' * 32
 
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/v1/token':
-            return httpx.Response(
-                200, json=_token_payload('token-1'), request=request
-            )
+            return httpx.Response(200, json=_token_payload('token-1'), request=request)
         if request.url.path == f'/api/v1/receipt/{request_id}':
             return httpx.Response(
                 200,
@@ -481,9 +437,7 @@ async def test_async_client_rejects_receipt_check_payload_from_other_endpoint() 
                 },
                 request=request,
             )
-        raise AssertionError(
-            f'Unexpected request {request.method} {request.url!s}'
-        )
+        raise AssertionError(f'Unexpected request {request.method} {request.url!s}')
 
     transport = httpx.MockTransport(handler)
     async with NoviApiAsyncClient(

@@ -24,18 +24,18 @@ def pytest_runtest_setup(item: pytest.Item) -> None:
     if 'hardware_stateful' in item.keywords and not item.config.getoption(
         '--run-hardware-stateful'
     ):
-        pytest.skip(
+        reason = (
             'stateful hardware tests are disabled; '
             'pass --run-hardware-stateful to enable'
         )
+        raise pytest.skip.Exception(reason)
 
 
 @pytest.fixture
 def hardware_base_url(request: pytest.FixtureRequest) -> str:
     if not request.config.getoption('--run-hardware'):
-        pytest.skip(
-            'hardware tests are disabled; pass --run-hardware to enable'
-        )
+        reason = 'hardware tests are disabled; pass --run-hardware to enable'
+        raise pytest.skip.Exception(reason)
 
     base_url = os.environ.get('NOVIAPI_BASE_URL')
     if not base_url:

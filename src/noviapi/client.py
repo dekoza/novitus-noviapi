@@ -78,14 +78,10 @@ def _parse_json(response: httpx.Response) -> Any:
     try:
         return response.json()
     except ValueError as exc:
-        raise NoviApiTransportError(
-            'NoviAPI returned a non-JSON response'
-        ) from exc
+        raise NoviApiTransportError('NoviAPI returned a non-JSON response') from exc
 
 
-def _validate_json_response(
-    response: httpx.Response, model_type: type[Any]
-) -> Any:
+def _validate_json_response(response: httpx.Response, model_type: type[Any]) -> Any:
     payload = _parse_json(response)
     try:
         return model_type.model_validate(payload)
@@ -169,9 +165,7 @@ def _validate_check_response(
 ) -> CheckResponse:
     actual_response_keys = _response_payload_keys(response.request.response)
     if not actual_response_keys.issubset(allowed_response_keys):
-        raise NoviApiTransportError(
-            'Unexpected response payload for this endpoint'
-        )
+        raise NoviApiTransportError('Unexpected response payload for this endpoint')
     return response
 
 
@@ -182,9 +176,8 @@ class _SyncTokenProvider:
         self._token: TokenResponse | None = None
 
     def _token_is_valid(self) -> bool:
-        return (
-            self._token is not None
-            and self._token.expiration_date > datetime.now(UTC)
+        return self._token is not None and self._token.expiration_date > datetime.now(
+            UTC
         )
 
     def _request_new_token_unlocked(self) -> TokenResponse:
@@ -208,9 +201,7 @@ class _SyncTokenProvider:
                 return self._request_new_token_unlocked().token
             return self._refresh_token_unlocked(self._token.token).token
 
-    def _refresh_token_unlocked(
-        self, current_token: str | None
-    ) -> TokenResponse:
+    def _refresh_token_unlocked(self, current_token: str | None) -> TokenResponse:
         if self._token is None:
             return self._request_new_token_unlocked()
         if (
@@ -219,7 +210,8 @@ class _SyncTokenProvider:
             and self._token_is_valid()
         ):
             return self._token
-        response = self._client.patch(
+        response = self._client.request(
+            'PATCH',
             '/token',
             auth=None,
             headers={
@@ -250,9 +242,8 @@ class _AsyncTokenProvider:
         self._token: TokenResponse | None = None
 
     def _token_is_valid(self) -> bool:
-        return (
-            self._token is not None
-            and self._token.expiration_date > datetime.now(UTC)
+        return self._token is not None and self._token.expiration_date > datetime.now(
+            UTC
         )
 
     async def _request_new_token_unlocked(self) -> TokenResponse:
@@ -274,13 +265,9 @@ class _AsyncTokenProvider:
                 return self._token.token
             if self._token is None:
                 return (await self._request_new_token_unlocked()).token
-            return (
-                await self._refresh_token_unlocked(self._token.token)
-            ).token
+            return (await self._refresh_token_unlocked(self._token.token)).token
 
-    async def _refresh_token_unlocked(
-        self, current_token: str | None
-    ) -> TokenResponse:
+    async def _refresh_token_unlocked(self, current_token: str | None) -> TokenResponse:
         if self._token is None:
             return await self._request_new_token_unlocked()
         if (
@@ -289,7 +276,8 @@ class _AsyncTokenProvider:
             and self._token_is_valid()
         ):
             return self._token
-        response = await self._client.patch(
+        response = await self._client.request(
+            'PATCH',
             '/token',
             auth=None,
             headers={
@@ -304,9 +292,7 @@ class _AsyncTokenProvider:
         self._token = token
         return token
 
-    async def refresh_token(
-        self, current_token: str | None = None
-    ) -> TokenResponse:
+    async def refresh_token(self, current_token: str | None = None) -> TokenResponse:
         async with self._lock:
             return await self._refresh_token_unlocked(current_token)
 
@@ -319,9 +305,7 @@ class _SyncRequestMixin:
     _client: httpx.Client
     _token_provider: _SyncTokenProvider
 
-    def _send_raw(
-        self, method: str, path: str, **kwargs: Any
-    ) -> httpx.Response:
+    def _send_raw(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
             return self._client.request(method, path, **kwargs)
         except httpx.HTTPError as exc:
@@ -341,9 +325,7 @@ class _SyncRequestMixin:
         if require_auth:
             token = self._token_provider.get_valid_token()
             headers['Authorization'] = f'Bearer {token}'
-        response = self._send_raw(
-            method, path, headers=headers, **request_kwargs
-        )
+        response = self._send_raw(method, path, headers=headers, **request_kwargs)
         if response.status_code == 401 and require_auth and token is not None:
             refreshed_token = self._token_provider.refresh_token(token).token
             retry_headers = httpx.Headers(headers)
@@ -405,9 +387,7 @@ class _AsyncRequestMixin:
     _client: httpx.AsyncClient
     _token_provider: _AsyncTokenProvider
 
-    async def _send_raw(
-        self, method: str, path: str, **kwargs: Any
-    ) -> httpx.Response:
+    async def _send_raw(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
             return await self._client.request(method, path, **kwargs)
         except httpx.HTTPError as exc:
@@ -427,13 +407,9 @@ class _AsyncRequestMixin:
         if require_auth:
             token = await self._token_provider.get_valid_token()
             headers['Authorization'] = f'Bearer {token}'
-        response = await self._send_raw(
-            method, path, headers=headers, **request_kwargs
-        )
+        response = await self._send_raw(method, path, headers=headers, **request_kwargs)
         if response.status_code == 401 and require_auth and token is not None:
-            refreshed_token = (
-                await self._token_provider.refresh_token(token)
-            ).token
+            refreshed_token = (await self._token_provider.refresh_token(token)).token
             retry_headers = httpx.Headers(headers)
             retry_headers['Authorization'] = f'Bearer {refreshed_token}'
             response = await self._send_raw(
@@ -478,9 +454,7 @@ class _AsyncRequestMixin:
         allowed_response_keys: set[str],
     ) -> CheckResponse:
         params = {'timeout': timeout} if timeout is not None else None
-        response = await self._request(
-            'GET', f'{path}/{request_id}', params=params
-        )
+        response = await self._request('GET', f'{path}/{request_id}', params=params)
         parsed = _validate_json_response(response, CheckResponse)
         return _validate_check_response(
             parsed, allowed_response_keys=allowed_response_keys
@@ -538,9 +512,7 @@ class NoviApiClient(_SyncRequestMixin):
         response = self._request('DELETE', '/queue')
         return _validate_json_response(response, QueueDeleteResponse)
 
-    def receipt_send(
-        self, receipt: Receipt | dict[str, Any]
-    ) -> CreatedResponse:
+    def receipt_send(self, receipt: Receipt | dict[str, Any]) -> CreatedResponse:
         return self._send('/receipt', 'receipt', receipt, Receipt)
 
     def receipt_confirm(self, request_id: str) -> ConfirmedResponse:
@@ -559,9 +531,7 @@ class NoviApiClient(_SyncRequestMixin):
     def receipt_cancel(self, request_id: str) -> DeleteResponse:
         return self._cancel('/receipt', request_id)
 
-    def invoice_send(
-        self, invoice: Invoice | dict[str, Any]
-    ) -> CreatedResponse:
+    def invoice_send(self, invoice: Invoice | dict[str, Any]) -> CreatedResponse:
         return self._send('/invoice', 'invoice', invoice, Invoice)
 
     def invoice_confirm(self, request_id: str) -> ConfirmedResponse:
@@ -580,9 +550,7 @@ class NoviApiClient(_SyncRequestMixin):
     def invoice_cancel(self, request_id: str) -> DeleteResponse:
         return self._cancel('/invoice', request_id)
 
-    def nf_printout_send(
-        self, printout: NonFiscal | dict[str, Any]
-    ) -> CreatedResponse:
+    def nf_printout_send(self, printout: NonFiscal | dict[str, Any]) -> CreatedResponse:
         return self._send('/nf_printout', 'printout', printout, NonFiscal)
 
     def nf_printout_confirm(self, request_id: str) -> ConfirmedResponse:
@@ -604,9 +572,7 @@ class NoviApiClient(_SyncRequestMixin):
     def daily_report_send(
         self, daily_report: DailyReport | dict[str, Any]
     ) -> CreatedResponse:
-        return self._send(
-            '/daily_report', 'daily_report', daily_report, DailyReport
-        )
+        return self._send('/daily_report', 'daily_report', daily_report, DailyReport)
 
     def daily_report_confirm(self, request_id: str) -> ConfirmedResponse:
         return self._confirm('/daily_report', request_id)
@@ -643,9 +609,7 @@ class NoviApiClient(_SyncRequestMixin):
     def eft_cancel(self, request_id: str) -> DeleteResponse:
         return self._cancel('/eft', request_id)
 
-    def graphic_send(
-        self, graphic: GraphicCommand | dict[str, Any]
-    ) -> CreatedResponse:
+    def graphic_send(self, graphic: GraphicCommand | dict[str, Any]) -> CreatedResponse:
         return self._send('/graphic', 'graphic', graphic, GraphicCommand)
 
     def graphic_confirm(self, request_id: str) -> ConfirmedResponse:
@@ -690,9 +654,7 @@ class NoviApiClient(_SyncRequestMixin):
     def configuration_cancel(self, request_id: str) -> DeleteResponse:
         return self._cancel('/configuration', request_id)
 
-    def status_send(
-        self, status: StatusCommand | dict[str, Any]
-    ) -> CreatedResponse:
+    def status_send(self, status: StatusCommand | dict[str, Any]) -> CreatedResponse:
         return self._send('/status', 'status', status, StatusCommand)
 
     def status_confirm(self, request_id: str) -> ConfirmedResponse:
@@ -714,9 +676,7 @@ class NoviApiClient(_SyncRequestMixin):
     def direct_io_send(
         self, direct_io: DirectIOCommand | dict[str, Any]
     ) -> CreatedResponse:
-        return self._send(
-            '/direct_io', 'direct_io', direct_io, DirectIOCommand
-        )
+        return self._send('/direct_io', 'direct_io', direct_io, DirectIOCommand)
 
     def direct_io_confirm(self, request_id: str) -> ConfirmedResponse:
         return self._confirm('/direct_io', request_id)
@@ -761,9 +721,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
         *,
         timeout: httpx.Timeout | float = 5.0,
         verify: bool | str = True,
-        transport: httpx.AsyncBaseTransport
-        | httpx.BaseTransport
-        | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
         trust_env: bool = False,
     ) -> None:
         self._client = httpx.AsyncClient(
@@ -782,9 +740,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
     async def __aenter__(self) -> NoviApiAsyncClient:
         return self
 
-    async def __aexit__(
-        self, exc_type: object, exc: object, tb: object
-    ) -> None:
+    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
         await self.aclose()
 
     async def comm_test(self) -> bool:
@@ -794,9 +750,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
     async def token_get(self) -> TokenResponse:
         return await self._token_provider.request_new_token()
 
-    async def token_refresh(
-        self, current_token: str | None = None
-    ) -> TokenResponse:
+    async def token_refresh(self, current_token: str | None = None) -> TokenResponse:
         return await self._token_provider.refresh_token(current_token)
 
     async def queue_check(self) -> QueueStatusResponse:
@@ -807,9 +761,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
         response = await self._request('DELETE', '/queue')
         return _validate_json_response(response, QueueDeleteResponse)
 
-    async def receipt_send(
-        self, receipt: Receipt | dict[str, Any]
-    ) -> CreatedResponse:
+    async def receipt_send(self, receipt: Receipt | dict[str, Any]) -> CreatedResponse:
         return await self._send('/receipt', 'receipt', receipt, Receipt)
 
     async def receipt_confirm(self, request_id: str) -> ConfirmedResponse:
@@ -828,9 +780,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
     async def receipt_cancel(self, request_id: str) -> DeleteResponse:
         return await self._cancel('/receipt', request_id)
 
-    async def invoice_send(
-        self, invoice: Invoice | dict[str, Any]
-    ) -> CreatedResponse:
+    async def invoice_send(self, invoice: Invoice | dict[str, Any]) -> CreatedResponse:
         return await self._send('/invoice', 'invoice', invoice, Invoice)
 
     async def invoice_confirm(self, request_id: str) -> ConfirmedResponse:
@@ -852,9 +802,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
     async def nf_printout_send(
         self, printout: NonFiscal | dict[str, Any]
     ) -> CreatedResponse:
-        return await self._send(
-            '/nf_printout', 'printout', printout, NonFiscal
-        )
+        return await self._send('/nf_printout', 'printout', printout, NonFiscal)
 
     async def nf_printout_confirm(self, request_id: str) -> ConfirmedResponse:
         return await self._confirm('/nf_printout', request_id)
@@ -895,9 +843,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
     async def daily_report_cancel(self, request_id: str) -> DeleteResponse:
         return await self._cancel('/daily_report', request_id)
 
-    async def eft_send(
-        self, eft: EFTCommand | dict[str, Any]
-    ) -> CreatedResponse:
+    async def eft_send(self, eft: EFTCommand | dict[str, Any]) -> CreatedResponse:
         return await self._send('/eft', 'eft', eft, EFTCommand)
 
     async def eft_confirm(self, request_id: str) -> ConfirmedResponse:
@@ -947,9 +893,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
             ConfigurationCommand,
         )
 
-    async def configuration_confirm(
-        self, request_id: str
-    ) -> ConfirmedResponse:
+    async def configuration_confirm(self, request_id: str) -> ConfirmedResponse:
         return await self._confirm('/configuration', request_id)
 
     async def configuration_check(
@@ -989,9 +933,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
     async def direct_io_send(
         self, direct_io: DirectIOCommand | dict[str, Any]
     ) -> CreatedResponse:
-        return await self._send(
-            '/direct_io', 'direct_io', direct_io, DirectIOCommand
-        )
+        return await self._send('/direct_io', 'direct_io', direct_io, DirectIOCommand)
 
     async def direct_io_confirm(self, request_id: str) -> ConfirmedResponse:
         return await self._confirm('/direct_io', request_id)
@@ -1009,9 +951,7 @@ class NoviApiAsyncClient(_AsyncRequestMixin):
     async def direct_io_cancel(self, request_id: str) -> DeleteResponse:
         return await self._cancel('/direct_io', request_id)
 
-    async def lock_send(
-        self, lock: LockCommand | dict[str, Any]
-    ) -> CreatedResponse:
+    async def lock_send(self, lock: LockCommand | dict[str, Any]) -> CreatedResponse:
         return await self._send('/lock', 'lock', lock, LockCommand)
 
     async def lock_confirm(self, request_id: str) -> ConfirmedResponse:

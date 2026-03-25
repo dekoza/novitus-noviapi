@@ -16,9 +16,7 @@ BASE64_PATTERN = (
     r'^(?:[A-Za-z0-9+/]{4})*'
     r'(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'
 )
-REQUEST_DATE_PATTERN = (
-    r'([0-9]{2})([:/\-.]{1})([0-9]{2})([:/\-.]{1})([0-9]{4})$'
-)
+REQUEST_DATE_PATTERN = r'([0-9]{2})([:/\-.]{1})([0-9]{2})([:/\-.]{1})([0-9]{4})$'
 
 Money = Annotated[Decimal, Field(ge=0, max_digits=11, decimal_places=2)]
 Quantity = Annotated[Decimal, Field(ge=0, max_digits=15, decimal_places=6)]
@@ -33,18 +31,14 @@ RequestDate = Annotated[str, StringConstraints(pattern=REQUEST_DATE_PATTERN)]
 
 
 def _exactly_one(model: BaseModel, field_names: tuple[str, ...]) -> None:
-    count = sum(
-        getattr(model, field_name) is not None for field_name in field_names
-    )
+    count = sum(getattr(model, field_name) is not None for field_name in field_names)
     if count != 1:
         joined = ', '.join(field_names)
         raise ValueError(f'Exactly one of {joined} must be set')
 
 
 def _at_most_one(model: BaseModel, field_names: tuple[str, ...]) -> None:
-    count = sum(
-        getattr(model, field_name) is not None for field_name in field_names
-    )
+    count = sum(getattr(model, field_name) is not None for field_name in field_names)
     if count > 1:
         joined = ', '.join(field_names)
         raise ValueError(f'At most one of {joined} may be set')
@@ -61,9 +55,7 @@ class Discount(NoviBaseModel):
         'value_discount',
         'value_markup',
     ]
-    name: (
-        Annotated[str, StringConstraints(min_length=1, max_length=20)] | None
-    ) = None
+    name: Annotated[str, StringConstraints(min_length=1, max_length=20)] | None = None
     value: Money
 
 
@@ -78,9 +70,7 @@ class Article(NoviBaseModel):
     quantity: Quantity
     price: Money
     value: Money
-    unit: (
-        Annotated[str, StringConstraints(min_length=1, max_length=4)] | None
-    ) = None
+    unit: Annotated[str, StringConstraints(min_length=1, max_length=4)] | None = None
     discount_markup: Discount | None = None
     code: ArticleCode | None = None
     description: (
@@ -105,9 +95,7 @@ class Advance(NoviBaseModel):
 
 
 class Container(NoviBaseModel):
-    name: (
-        Annotated[str, StringConstraints(min_length=1, max_length=60)] | None
-    ) = None
+    name: Annotated[str, StringConstraints(min_length=1, max_length=60)] | None = None
     number: Annotated[int, Field(ge=0, le=9999)] | None = None
     quantity: Money | None = None
     value: Money
@@ -118,9 +106,7 @@ class CashPayment(NoviBaseModel):
 
 
 class NamedPayment(NoviBaseModel):
-    name: (
-        Annotated[str, StringConstraints(min_length=1, max_length=24)] | None
-    ) = None
+    name: Annotated[str, StringConstraints(min_length=1, max_length=24)] | None = None
     value: Money
 
 
@@ -140,9 +126,7 @@ class Summary(NoviBaseModel):
 
 
 class EDocument(NoviBaseModel):
-    transaction_id: Annotated[
-        str, StringConstraints(min_length=1, max_length=100)
-    ]
+    transaction_id: Annotated[str, StringConstraints(min_length=1, max_length=100)]
     protocol: Literal['NOVITUS', 'MF'] | None = None
     print_send_mode: (
         Literal[
@@ -156,9 +140,7 @@ class EDocument(NoviBaseModel):
 
 
 class ReceiptBuyer(NoviBaseModel):
-    nip: (
-        Annotated[str, StringConstraints(min_length=1, max_length=16)] | None
-    ) = None
+    nip: Annotated[str, StringConstraints(min_length=1, max_length=16)] | None = None
     e_document: EDocument | None = None
 
 
@@ -343,9 +325,7 @@ class PrintLine(NoviBaseModel):
 
 class Receipt(NoviBaseModel):
     items: Annotated[list[Item], Field(min_length=1, max_length=255)]
-    payments: (
-        Annotated[list[Payment], Field(min_length=1, max_length=16)] | None
-    ) = None
+    payments: Annotated[list[Payment], Field(min_length=1, max_length=16)] | None = None
     summary: Summary
     printout_lines: (
         Annotated[
@@ -382,9 +362,7 @@ class InvoiceInfo(NoviBaseModel):
     payment_form: (
         Annotated[str, StringConstraints(min_length=1, max_length=20)] | None
     ) = None
-    paid: (
-        Annotated[str, StringConstraints(min_length=1, max_length=29)] | None
-    ) = None
+    paid: Annotated[str, StringConstraints(min_length=1, max_length=29)] | None = None
 
 
 class InvoiceBuyer(NoviBaseModel):
@@ -400,9 +378,7 @@ class InvoiceBuyer(NoviBaseModel):
 
 
 class InvoicePerson(NoviBaseModel):
-    name: (
-        Annotated[str, StringConstraints(min_length=1, max_length=60)] | None
-    ) = None
+    name: Annotated[str, StringConstraints(min_length=1, max_length=60)] | None = None
     print_info: Literal[
         'place_for_signature',
         'name_and_place_for_signature',
@@ -444,9 +420,7 @@ class Invoice(NoviBaseModel):
     seller: InvoicePerson | None = None
     options: InvoiceOptions | None = None
     items: Annotated[list[Item], Field(min_length=1, max_length=255)]
-    payments: (
-        Annotated[list[Payment], Field(min_length=1, max_length=16)] | None
-    ) = None
+    payments: Annotated[list[Payment], Field(min_length=1, max_length=16)] | None = None
     summary: Summary
     printout_lines: (
         Annotated[
@@ -455,9 +429,9 @@ class Invoice(NoviBaseModel):
         ]
         | None
     ) = None
-    additional_info: (
-        Annotated[list[AdditionalInfoLine], Field(min_length=1)] | None
-    ) = None
+    additional_info: Annotated[list[AdditionalInfoLine], Field(min_length=1)] | None = (
+        None
+    )
     system_info: SystemInfo | None = None
     device_control: DeviceControl | None = None
 
@@ -480,9 +454,9 @@ class EFTCommand(NoviBaseModel):
     brutto: Money | None = None
     netto: Money | None = None
     vat: Money | None = None
-    currency: (
-        Annotated[str, StringConstraints(min_length=3, max_length=3)] | None
-    ) = None
+    currency: Annotated[str, StringConstraints(min_length=3, max_length=3)] | None = (
+        None
+    )
     cashback: Money | None = None
     max_cashback: Money | None = None
     additional_info: (
@@ -497,9 +471,7 @@ class GraphicCommand(NoviBaseModel):
 
     @model_validator(mode='after')
     def validate_required_fields(self) -> Self:
-        if self.operation == 'program' and (
-            self.id is None or self.base64 is None
-        ):
+        if self.operation == 'program' and (self.id is None or self.base64 is None):
             raise ValueError('program operation requires id and base64')
         if self.operation != 'read_indexes' and self.id is None:
             raise ValueError(f'{self.operation} operation requires id')
@@ -518,9 +490,7 @@ class ConfigurationOption(NoviBaseModel):
 
 class ConfigurationCommand(NoviBaseModel):
     operation: Literal['program', 'read_array', 'read_range', 'read_all']
-    options: (
-        Annotated[list[ConfigurationOption], Field(min_length=1)] | None
-    ) = None
+    options: Annotated[list[ConfigurationOption], Field(min_length=1)] | None = None
     to_read: Annotated[list[int], Field(min_length=1)] | None = None
     range: ConfigurationRange | None = None
 
@@ -642,9 +612,7 @@ class GraphicResponse(NoviBaseModel):
     image_id: Annotated[int, Field(ge=0, le=1023)] | None = None
     total_len: int | None = None
     hex_crc: str | None = None
-    programmed_indexes: list[Annotated[int, Field(ge=0, le=1023)]] | None = (
-        None
-    )
+    programmed_indexes: list[Annotated[int, Field(ge=0, le=1023)]] | None = None
 
 
 class ConfigurationReadItem(NoviBaseModel):
@@ -669,9 +637,7 @@ class TotalsItem(NoviBaseModel):
 
 
 class FiscalMemoryStatus(NoviBaseModel):
-    unique_number: Annotated[
-        str, StringConstraints(min_length=13, max_length=13)
-    ]
+    unique_number: Annotated[str, StringConstraints(min_length=13, max_length=13)]
     tax_id: str
     size: int
     max_daily_reports: int

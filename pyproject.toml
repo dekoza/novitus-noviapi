@@ -40,6 +40,7 @@ dev = [
   "pre-commit>=4.2,<5.0",
   "pytest>=8.4,<9.0",
   "ruff>=0.11.0,<0.12.0",
+  "ty>=0.0.25",
   "uvloop>=0.21,<1.0; platform_python_implementation == 'CPython' and sys_platform != 'win32'",
 ]
 
@@ -66,7 +67,7 @@ markers = [
 testpaths = ["tests"]
 
 [tool.ruff]
-line-length = 79
+line-length = 88
 target-version = "py311"
 
 [tool.ruff.lint]

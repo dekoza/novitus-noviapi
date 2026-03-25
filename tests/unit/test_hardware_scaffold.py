@@ -45,10 +45,7 @@ def test_hardware_status_flow_test_exists_and_is_marked() -> None:
 def test_pyproject_registers_stateful_hardware_marker() -> None:
     pyproject = PYPROJECT_PATH.read_text(encoding='utf-8')
 
-    assert (
-        'hardware_stateful: enqueues or confirms live printer work'
-        in pyproject
-    )
+    assert 'hardware_stateful: enqueues or confirms live printer work' in pyproject
 
 
 def test_hardware_tests_are_skipped_without_opt_in() -> None:
@@ -86,9 +83,7 @@ def test_hardware_tests_fail_fast_without_base_url() -> None:
         capture_output=True,
         text=True,
         env={
-            key: value
-            for key, value in os.environ.items()
-            if key != 'NOVIAPI_BASE_URL'
+            key: value for key, value in os.environ.items() if key != 'NOVIAPI_BASE_URL'
         },
     )
 

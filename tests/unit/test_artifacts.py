@@ -17,9 +17,7 @@ def _wheel_members() -> list[str]:
 def _sdist_members() -> list[str]:
     sdist_path = next(DIST_DIR.glob('*.tar.gz'))
     with tarfile.open(sdist_path, 'r:gz') as archive:
-        return sorted(
-            member.name for member in archive.getmembers() if member.isfile()
-        )
+        return sorted(member.name for member in archive.getmembers() if member.isfile())
 
 
 def test_wheel_contains_only_runtime_package_files() -> None:
@@ -42,14 +40,10 @@ def test_sdist_contains_only_runtime_sources_and_metadata() -> None:
     assert any(member.endswith('/pyproject.toml') for member in members)
     assert any(member.endswith('/README.md') for member in members)
     assert any(member.endswith('/LICENSE') for member in members)
-    assert any(
-        member.endswith('/src/noviapi/__init__.py') for member in members
-    )
+    assert any(member.endswith('/src/noviapi/__init__.py') for member in members)
     assert any(member.endswith('/src/noviapi/client.py') for member in members)
     assert any(member.endswith('/src/noviapi/models.py') for member in members)
-    assert any(
-        member.endswith('/src/noviapi/exceptions.py') for member in members
-    )
+    assert any(member.endswith('/src/noviapi/exceptions.py') for member in members)
     assert all('/tests/' not in member for member in members)
     assert all('/contracts/' not in member for member in members)
     assert all('/examples/' not in member for member in members)

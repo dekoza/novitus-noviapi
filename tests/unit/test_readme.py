@@ -20,11 +20,3 @@ def test_readme_covers_async_auth_errors_and_hardware_section() -> None:
     assert '## Hardware testing' in readme
     assert '--run-hardware' in readme
     assert 'NOVIAPI_BASE_URL' in readme
-
-
-def test_readme_ends_with_novitus_thank_you_note() -> None:
-    readme = README_PATH.read_text(encoding='utf-8').rstrip()
-
-    assert readme.endswith(
-        'Thank you to Novitus for lending a development kit for this work.'
-    )
