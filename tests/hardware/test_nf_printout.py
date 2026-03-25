@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 import pytest
 
 from noviapi import NoviApiClient
@@ -43,8 +45,6 @@ def test_hardware_nf_printout_flow(hardware_base_url: str) -> None:
             assert checked.device.status == 'OK'
         except Exception:
             if request_id is not None:
-                try:
+                with contextlib.suppress(NoviApiError):
                     client.nf_printout_cancel(request_id)
-                except NoviApiError:
-                    pass
             raise

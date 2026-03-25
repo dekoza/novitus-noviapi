@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from noviapi.models import CheckResponse
-
 from noviapi._hardware_polling import poll_hardware_request
+from noviapi.models import CheckResponse
 
 
 def _check_response(status: str) -> CheckResponse:

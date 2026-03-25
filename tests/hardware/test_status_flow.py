@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 import pytest
 
 from noviapi import NoviApiClient
@@ -27,10 +29,8 @@ def test_hardware_status_device_flow(hardware_base_url: str) -> None:
             queue_after = client.queue_check()
         except Exception:
             if request_id is not None:
-                try:
+                with contextlib.suppress(NoviApiError):
                     client.status_cancel(request_id)
-                except NoviApiError:
-                    pass
             raise
 
     assert queue_before.requests_in_queue >= 0
