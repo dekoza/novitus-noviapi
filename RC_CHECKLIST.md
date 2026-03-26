@@ -43,13 +43,14 @@ bypassed and fixed later by hand.
 
 ## Hardware Evidence
 
-Record evidence against the manufacturer-declared minimum supported versions
-listed in `docs/hardware-testing.md`, and note separately that this library has
-been personally verified only on `POINT` firmware `1.00` so far.
+Record the manufacturer-declared minimum supported versions from
+`docs/hardware-testing.md`, and keep one reference verified device for direct
+project evidence. This library has been personally verified only on `POINT`
+firmware `1.00` so far.
 
-- [ ] `uv run pytest tests/hardware --run-hardware -m hardware` passes 3 times
-- [ ] `uv run pytest tests/hardware/test_status_flow.py --run-hardware --run-hardware-stateful -m hardware_stateful -x` passes 3 times
-- [ ] `uv run pytest tests/hardware/test_nf_printout.py --run-hardware --run-hardware-stateful -m hardware_stateful -x` passes 3 times
+- [ ] Reference verified device: `uv run pytest tests/hardware --run-hardware -m hardware` passes 3 times on `POINT` firmware `1.00`
+- [ ] Reference verified device: `uv run pytest tests/hardware/test_status_flow.py --run-hardware --run-hardware-stateful -m hardware_stateful -x` passes 3 times on `POINT` firmware `1.00`
+- [ ] Reference verified device: `uv run pytest tests/hardware/test_nf_printout.py --run-hardware --run-hardware-stateful -m hardware_stateful -x` passes 3 times on `POINT` firmware `1.00`
 
 | Model | Firmware | Default suite x3 | Status flow x3 | NF printout x3 | Notes |
 | --- | --- | --- | --- | --- | --- |

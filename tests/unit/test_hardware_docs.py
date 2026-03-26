@@ -55,7 +55,14 @@ def test_rc_checklist_exists_and_mentions_current_ci_and_hardware_gates() -> Non
     assert 'tests/hardware/test_nf_printout.py' in checklist
     assert 'docs/hardware-testing.md' in checklist
     assert 'manufacturer-declared minimum supported versions' in checklist
-    assert 'personally verified only on `POINT` firmware `1.00`' in checklist
+    assert 'personally verified' in checklist
+    assert '`POINT`' in checklist
+    assert '`1.00`' in checklist
+    assert 'reference verified device' in checklist
+    assert '`uv run pytest tests/hardware --run-hardware -m hardware`' in checklist
+    assert '`uv run pytest tests/hardware/test_status_flow.py' in checklist
+    assert '`uv run pytest tests/hardware/test_nf_printout.py' in checklist
+    assert 'passes 3 times on `POINT` firmware `1.00`' in checklist
     assert '## Project-verified hardware evidence' in checklist
     assert '| Printer | Firmware | Verification source |' in checklist
     assert '| `POINT` | `1.00` | manual project verification |' in checklist
@@ -118,6 +125,11 @@ def test_hardware_guide_covers_requirements_and_execution_steps() -> None:
     assert 'manufacturer' in guide
     assert 'declared by the printer' in guide
     assert 'personally verified on `POINT` firmware `1.00`' in guide
+    assert 'reference verified' in guide
+    assert (
+        'repeated project hardware runs are required only for that reference device'
+        in guide
+    )
     assert 'POINT' in guide
     assert 'HD II Online' in guide
     assert 'Deon Online' in guide

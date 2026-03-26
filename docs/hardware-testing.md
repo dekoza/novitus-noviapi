@@ -38,6 +38,10 @@ matrix but other than `POINT` `1.00`, treat the result as vendor-declared
 compatibility unless you also record project-specific hardware evidence for that
 printer and firmware.
 
+For release-candidate gating, `POINT` `1.00` is the current reference verified
+device. The wider matrix defines accepted vendor-backed support scope, but the
+repeated project hardware runs are required only for that reference device.
+
 ## Project-verified hardware evidence
 
 This table tracks the hardware and firmware combinations that this project has
