@@ -32,9 +32,28 @@ def test_rc_checklist_exists_and_mentions_current_ci_and_hardware_gates() -> Non
     assert 'uv run ty check src tests scripts' in checklist
     assert '--ignore=tests/unit/test_artifacts.py -x' in checklist
     assert 'uv build --no-sources --clear' in checklist
+    assert 'uv venv build/rc-smoke-wheel --clear --no-project' in checklist
+    assert 'uv pip install --python build/rc-smoke-wheel dist/*.whl' in checklist
+    assert 'build/rc-smoke-wheel/bin/python -m noviapi._release_smoke' in checklist
+    assert 'uv venv build/rc-smoke-sdist --clear --no-project' in checklist
+    assert 'uv pip install --python build/rc-smoke-sdist dist/*.tar.gz' in checklist
+    assert 'build/rc-smoke-sdist/bin/python -m noviapi._release_smoke' in checklist
     assert 'tests/hardware/test_status_flow.py' in checklist
     assert 'tests/hardware/test_nf_printout.py' in checklist
     assert '0.2.0rc1' in checklist
+
+
+def test_release_smoke_module_covers_sync_and_async_clients() -> None:
+    smoke_script = (PROJECT_ROOT / 'src' / 'noviapi' / '_release_smoke.py').read_text(
+        encoding='utf-8'
+    )
+
+    assert 'from noviapi import NoviApiAsyncClient, NoviApiClient' in smoke_script
+    assert 'with NoviApiClient(base_url, transport=transport)' in smoke_script
+    assert (
+        'async with NoviApiAsyncClient(base_url, transport=transport)' in smoke_script
+    )
+    assert 'anyio.run(run_async)' in smoke_script
 
 
 def test_hardware_guide_covers_requirements_and_execution_steps() -> None:

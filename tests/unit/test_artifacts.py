@@ -61,6 +61,7 @@ def test_wheel_contains_only_runtime_package_files() -> None:
     members = _wheel_members()
 
     assert 'noviapi/__init__.py' in members
+    assert 'noviapi/_release_smoke.py' in members
     assert 'noviapi/client.py' in members
     assert 'noviapi/models.py' in members
     assert 'noviapi/exceptions.py' in members
@@ -78,6 +79,7 @@ def test_sdist_contains_only_runtime_sources_and_metadata() -> None:
     assert any(member.endswith('/README.md') for member in members)
     assert any(member.endswith('/LICENSE') for member in members)
     assert any(member.endswith('/src/noviapi/__init__.py') for member in members)
+    assert any(member.endswith('/src/noviapi/_release_smoke.py') for member in members)
     assert any(member.endswith('/src/noviapi/client.py') for member in members)
     assert any(member.endswith('/src/noviapi/models.py') for member in members)
     assert any(member.endswith('/src/noviapi/exceptions.py') for member in members)

@@ -21,6 +21,19 @@ def test_ci_workflow_runs_quality_checks_and_build() -> None:
     assert '--ignore=tests/unit/test_artifacts.py -x' in workflow
     assert 'uv build --no-sources --clear' in workflow
     assert 'uv run pytest tests/unit/test_artifacts.py -x' in workflow
+    assert 'scripts/release_smoke_test.py' not in workflow
+    assert 'uv venv build/rc-smoke-wheel --clear --no-project' in workflow
+    assert 'uv pip install --python build/rc-smoke-wheel dist/*.whl' in workflow
+    assert 'build/rc-smoke-wheel/bin/python -m noviapi._release_smoke' in workflow
+    assert 'uv venv build/rc-smoke-sdist --clear --no-project' in workflow
+    assert 'uv pip install --python build/rc-smoke-sdist dist/*.tar.gz' in workflow
+    assert 'build/rc-smoke-sdist/bin/python -m noviapi._release_smoke' in workflow
     assert workflow.index('uv build --no-sources --clear') < workflow.index(
         'uv run pytest tests/unit/test_artifacts.py -x'
     )
+    assert workflow.index(
+        'uv run pytest tests/unit/test_artifacts.py -x'
+    ) < workflow.index('build/rc-smoke-wheel/bin/python -m noviapi._release_smoke')
+    assert workflow.index(
+        'build/rc-smoke-wheel/bin/python -m noviapi._release_smoke'
+    ) < workflow.index('build/rc-smoke-sdist/bin/python -m noviapi._release_smoke')

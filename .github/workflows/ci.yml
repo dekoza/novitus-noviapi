@@ -40,3 +40,15 @@ jobs:
 
       - name: Verify artifact contents
         run: uv run pytest tests/unit/test_artifacts.py -x
+
+      - name: Smoke-test wheel install
+        run: |
+          uv venv build/rc-smoke-wheel --clear --no-project
+          uv pip install --python build/rc-smoke-wheel dist/*.whl
+          build/rc-smoke-wheel/bin/python -m noviapi._release_smoke
+
+      - name: Smoke-test sdist install
+        run: |
+          uv venv build/rc-smoke-sdist --clear --no-project
+          uv pip install --python build/rc-smoke-sdist dist/*.tar.gz
+          build/rc-smoke-sdist/bin/python -m noviapi._release_smoke

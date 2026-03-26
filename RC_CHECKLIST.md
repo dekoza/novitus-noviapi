@@ -33,13 +33,13 @@ bypassed and fixed later by hand.
 
 - [ ] `uv venv build/rc-smoke-wheel --clear --no-project`
 - [ ] `uv pip install --python build/rc-smoke-wheel dist/*.whl`
-- [ ] `build/rc-smoke-wheel/bin/python scripts/release_smoke_test.py`
+- [ ] `build/rc-smoke-wheel/bin/python -m noviapi._release_smoke`
 
 ### Source distribution
 
 - [ ] `uv venv build/rc-smoke-sdist --clear --no-project`
 - [ ] `uv pip install --python build/rc-smoke-sdist dist/*.tar.gz`
-- [ ] `build/rc-smoke-sdist/bin/python scripts/release_smoke_test.py`
+- [ ] `build/rc-smoke-sdist/bin/python -m noviapi._release_smoke`
 
 ## Hardware Evidence
 
