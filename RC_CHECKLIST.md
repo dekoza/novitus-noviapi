@@ -55,6 +55,14 @@ been personally verified only on `POINT` firmware `1.00` so far.
 | --- | --- | --- | --- | --- | --- |
 | | | | | | |
 
+## Project-verified hardware evidence
+
+Keep this table aligned with `docs/hardware-testing.md`.
+
+| Printer | Firmware | Verification source |
+| --- | --- | --- |
+| `POINT` | `1.00` | manual project verification |
+
 ## Packaging And Metadata
 
 - [ ] `pyproject.toml` no longer declares Alpha

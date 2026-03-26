@@ -56,6 +56,9 @@ def test_rc_checklist_exists_and_mentions_current_ci_and_hardware_gates() -> Non
     assert 'docs/hardware-testing.md' in checklist
     assert 'manufacturer-declared minimum supported versions' in checklist
     assert 'personally verified only on `POINT` firmware `1.00`' in checklist
+    assert '## Project-verified hardware evidence' in checklist
+    assert '| Printer | Firmware | Verification source |' in checklist
+    assert '| `POINT` | `1.00` | manual project verification |' in checklist
     assert '0.2.0rc1' in checklist
 
 
@@ -125,3 +128,6 @@ def test_hardware_guide_covers_requirements_and_execution_steps() -> None:
     assert '310' in guide
     assert '300' in guide
     assert '1.30' in guide
+    assert '## Project-verified hardware evidence' in guide
+    assert '| Printer | Firmware | Evidence |' in guide
+    assert '| `POINT` | `1.00` | manual project verification |' in guide

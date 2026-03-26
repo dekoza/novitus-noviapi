@@ -38,6 +38,15 @@ matrix but other than `POINT` `1.00`, treat the result as vendor-declared
 compatibility unless you also record project-specific hardware evidence for that
 printer and firmware.
 
+## Project-verified hardware evidence
+
+This table tracks the hardware and firmware combinations that this project has
+actually exercised directly.
+
+| Printer | Firmware | Evidence |
+| --- | --- | --- |
+| `POINT` | `1.00` | manual project verification |
+
 ## Required environment
 
 Export the base URL before running any hardware tests:
