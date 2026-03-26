@@ -132,8 +132,16 @@ so it does not print fiscal documents by accident.
 
 Optional stateful coverage includes a read-only
 `status_send()` / `status_confirm()` / `status_check()` device-status flow and a
-non-fiscal printout that prints `Greetings from the test suite!`. Those tests
-require the extra `--run-hardware-stateful` flag.
+non-fiscal document test in `tests/hardware/test_nf_printout.py` that prints
+`Greetings from the test suite!`. Those tests require the extra
+`--run-hardware-stateful` flag.
+
+The non-fiscal document test still consumes paper, so run it only when that
+output is acceptable.
+
+These hardware checks are manual and are not part of GitHub Actions. CI only
+covers contract, unit, integration, and packaging validation.
+
 Long-poll `timeout` parameters are forwarded in milliseconds, matching the
 NoviAPI contract.
 
@@ -150,6 +158,8 @@ hardware tests also require `--run-hardware-stateful`.
 
 See `docs/hardware-testing.md` for the full checklist, requirements, safety
 notes, and recommended execution procedure.
+
+See `RC_CHECKLIST.md` for the current release-candidate gate.
 
 ## Status
 

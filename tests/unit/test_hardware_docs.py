@@ -13,6 +13,30 @@ def test_readme_links_to_detailed_hardware_test_guide() -> None:
     assert 'See `docs/hardware-testing.md` for the full checklist' in readme
 
 
+def test_readme_hardware_section_mentions_non_fiscal_printout_test() -> None:
+    readme = README_PATH.read_text(encoding='utf-8')
+
+    assert 'non-fiscal document' in readme
+    assert 'Greetings from the test suite!' in readme
+    assert 'consumes paper' in readme
+    assert 'tests/hardware/test_nf_printout.py' in readme
+    assert '--run-hardware-stateful' in readme
+    assert 'not part of GitHub Actions' in readme
+
+
+def test_rc_checklist_exists_and_mentions_current_ci_and_hardware_gates() -> None:
+    checklist = (PROJECT_ROOT / 'RC_CHECKLIST.md').read_text(encoding='utf-8')
+
+    assert '# Release Candidate Checklist' in checklist
+    assert 'uv run pre-commit run --all-files' in checklist
+    assert 'uv run ty check src tests scripts' in checklist
+    assert '--ignore=tests/unit/test_artifacts.py -x' in checklist
+    assert 'uv build --no-sources --clear' in checklist
+    assert 'tests/hardware/test_status_flow.py' in checklist
+    assert 'tests/hardware/test_nf_printout.py' in checklist
+    assert '0.2.0rc1' in checklist
+
+
 def test_hardware_guide_covers_requirements_and_execution_steps() -> None:
     guide = DOC_PATH.read_text(encoding='utf-8')
 
