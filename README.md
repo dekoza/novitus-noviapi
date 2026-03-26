@@ -165,9 +165,10 @@ See `RC_CHECKLIST.md` for the current release-candidate gate.
 
 This library started as one part of a larger project and was later extracted
 into a standalone open-source package. It currently ships strict models,
-explicit endpoint coverage, contract tests, lean release artifacts, and a small
-hardware test suite, while broader hardware coverage and additional release
-automation are still planned.
+explicit endpoint coverage, contract tests, lean release artifacts, artifact
+install smoke checks, and a small hardware test suite. Hardware support remains
+intentionally narrow and manual hardware validation still sits outside GitHub
+Actions.
 
 The extraction and open-source work was sponsored by
 [Diablaq](https://diablaq.com/), and Novitus provided a development kit for

@@ -4,7 +4,13 @@ import httpx
 import pytest
 
 from noviapi import NoviApiAsyncClient, NoviApiClient
-from noviapi.client import _AsyncTokenProvider, _normalize_base_url, _SyncTokenProvider
+from noviapi.client import (
+    CHECK_TIMEOUT_MARGIN_SECONDS,
+    _AsyncTokenProvider,
+    _normalize_base_url,
+    _request_timeout_for_check,
+    _SyncTokenProvider,
+)
 
 
 def _unexpected_request(request: httpx.Request) -> httpx.Response:
@@ -84,3 +90,40 @@ async def test_async_token_provider_raises_runtime_error_when_valid_token_is_mis
         await provider.get_valid_token()
 
     await client.aclose()
+
+
+def test_request_timeout_for_check_returns_none_when_poll_timeout_is_missing() -> None:
+    base_timeout = httpx.Timeout(5.0)
+
+    assert _request_timeout_for_check(base_timeout, None) is None
+
+
+def test_request_timeout_for_check_returns_none_when_read_timeout_is_unbounded() -> (
+    None
+):
+    base_timeout = httpx.Timeout(connect=5.0, read=None, write=5.0, pool=5.0)
+
+    assert _request_timeout_for_check(base_timeout, 30_000) is None
+
+
+def test_request_timeout_for_check_returns_none_when_read_timeout_is_long_enough() -> (
+    None
+):
+    poll_timeout_ms = 30_000
+    poll_timeout_seconds = (poll_timeout_ms / 1000) + CHECK_TIMEOUT_MARGIN_SECONDS
+    base_timeout = httpx.Timeout(
+        connect=5.0,
+        read=poll_timeout_seconds,
+        write=5.0,
+        pool=5.0,
+    )
+
+    assert _request_timeout_for_check(base_timeout, poll_timeout_ms) is None
+
+
+def test_request_timeout_for_check_extends_only_the_read_timeout() -> None:
+    base_timeout = httpx.Timeout(connect=1.0, read=5.0, write=2.0, pool=3.0)
+
+    timeout = _request_timeout_for_check(base_timeout, 30_000)
+
+    assert timeout == httpx.Timeout(connect=1.0, read=35.0, write=2.0, pool=3.0)

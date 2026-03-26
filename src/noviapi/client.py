@@ -91,6 +91,14 @@ def _timeout_to_poll_timeout(timeout: httpx.Timeout | float) -> httpx.Timeout:
     return timeout if isinstance(timeout, httpx.Timeout) else httpx.Timeout(timeout)
 
 
+def _timeout_component(value: object) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    raise TypeError('httpx.Timeout components must be numeric or None')
+
+
 def _request_timeout_for_check(
     base_timeout: httpx.Timeout, poll_timeout_ms: int | None
 ) -> httpx.Timeout | None:
@@ -98,15 +106,15 @@ def _request_timeout_for_check(
         return None
 
     poll_timeout_seconds = (poll_timeout_ms / 1000) + CHECK_TIMEOUT_MARGIN_SECONDS
-    read_timeout = base_timeout.read
+    read_timeout = _timeout_component(base_timeout.read)
     if read_timeout is None or read_timeout >= poll_timeout_seconds:
         return None
 
     return httpx.Timeout(
-        connect=base_timeout.connect,
+        connect=_timeout_component(base_timeout.connect),
         read=poll_timeout_seconds,
-        write=base_timeout.write,
-        pool=base_timeout.pool,
+        write=_timeout_component(base_timeout.write),
+        pool=_timeout_component(base_timeout.pool),
     )
 
 
