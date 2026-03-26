@@ -21,3 +21,6 @@ def test_readme_status_section_no_longer_claims_release_blockers_are_planned() -
     assert 'broader hardware coverage' not in readme
     assert 'manual hardware validation' in readme
     assert 'outside GitHub' in readme
+    assert 'supported printer matrix' in readme
+    assert 'printer manufacturer' in readme
+    assert 'personally verified on `POINT` firmware `1.00`' in readme

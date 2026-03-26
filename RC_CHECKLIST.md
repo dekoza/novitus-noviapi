@@ -43,7 +43,9 @@ bypassed and fixed later by hand.
 
 ## Hardware Evidence
 
-Record evidence for each supported printer and firmware pair.
+Record evidence against the manufacturer-declared minimum supported versions
+listed in `docs/hardware-testing.md`, and note separately that this library has
+been personally verified only on `POINT` firmware `1.00` so far.
 
 - [ ] `uv run pytest tests/hardware --run-hardware -m hardware` passes 3 times
 - [ ] `uv run pytest tests/hardware/test_status_flow.py --run-hardware --run-hardware-stateful -m hardware_stateful -x` passes 3 times

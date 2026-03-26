@@ -145,6 +145,19 @@ covers contract, unit, integration, and packaging validation.
 Long-poll `timeout` parameters are forwarded in milliseconds, matching the
 NoviAPI contract.
 
+The current supported printer matrix below reflects the minimum firmware
+versions declared by the printer manufacturer for NoviAPI support:
+
+- `POINT` firmware `1.00`
+- `HD II Online` firmware `3.50`
+- `Deon Online` firmware `310`
+- `Bono Online` firmware `300`
+- `INFIS` firmware `1.30`
+
+This library has been personally verified on `POINT` firmware `1.00`. Treat the
+other entries as manufacturer-declared minimum supported versions until they are
+individually exercised by this project's hardware validation.
+
 Set the printer base URL and enable the hardware test marker explicitly:
 
 ```bash
@@ -168,7 +181,7 @@ into a standalone open-source package. It currently ships strict models,
 explicit endpoint coverage, contract tests, lean release artifacts, artifact
 install smoke checks, and a small hardware test suite. Hardware support remains
 intentionally narrow and manual hardware validation still sits outside GitHub
-Actions.
+Actions; the supported printer matrix lives in `docs/hardware-testing.md`.
 
 The extraction and open-source work was sponsored by
 [Diablaq](https://diablaq.com/), and Novitus provided a development kit for

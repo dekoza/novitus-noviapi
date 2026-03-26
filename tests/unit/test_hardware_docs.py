@@ -22,6 +22,19 @@ def test_readme_hardware_section_mentions_non_fiscal_printout_test() -> None:
     assert 'tests/hardware/test_nf_printout.py' in readme
     assert '--run-hardware-stateful' in readme
     assert 'not part of GitHub Actions' in readme
+    assert 'minimum firmware' in readme
+    assert 'printer manufacturer' in readme
+    assert 'personally verified on `POINT` firmware `1.00`' in readme
+    assert 'POINT' in readme
+    assert 'HD II Online' in readme
+    assert 'Deon Online' in readme
+    assert 'Bono Online' in readme
+    assert 'INFIS' in readme
+    assert '1.00' in readme
+    assert '3.50' in readme
+    assert '310' in readme
+    assert '300' in readme
+    assert '1.30' in readme
 
 
 def test_rc_checklist_exists_and_mentions_current_ci_and_hardware_gates() -> None:
@@ -40,6 +53,9 @@ def test_rc_checklist_exists_and_mentions_current_ci_and_hardware_gates() -> Non
     assert 'build/rc-smoke-sdist/bin/python -m noviapi._release_smoke' in checklist
     assert 'tests/hardware/test_status_flow.py' in checklist
     assert 'tests/hardware/test_nf_printout.py' in checklist
+    assert 'docs/hardware-testing.md' in checklist
+    assert 'manufacturer-declared minimum supported versions' in checklist
+    assert 'personally verified only on `POINT` firmware `1.00`' in checklist
     assert '0.2.0rc1' in checklist
 
 
@@ -94,3 +110,18 @@ def test_hardware_guide_covers_requirements_and_execution_steps() -> None:
     )
     assert 'Do not run hardware tests against a production printer' in guide
     assert 'PYTEST_XDIST_WORKER' in guide or 'parallel' in guide
+    assert '## Supported printer matrix' in guide
+    assert 'minimum firmware' in guide
+    assert 'manufacturer' in guide
+    assert 'declared by the printer' in guide
+    assert 'personally verified on `POINT` firmware `1.00`' in guide
+    assert 'POINT' in guide
+    assert 'HD II Online' in guide
+    assert 'Deon Online' in guide
+    assert 'Bono Online' in guide
+    assert 'INFIS' in guide
+    assert '1.00' in guide
+    assert '3.50' in guide
+    assert '310' in guide
+    assert '300' in guide
+    assert '1.30' in guide

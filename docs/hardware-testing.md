@@ -17,6 +17,27 @@ Do not run hardware tests against a production printer.
 - A development environment with project dependencies installed via `uv sync`.
 - Confidence that no other workstation is actively driving the same printer.
 
+## Supported printer matrix
+
+The matrix below reflects the minimum firmware versions declared by the printer
+manufacturer for NoviAPI support:
+
+| Printer | Manufacturer-declared minimum firmware |
+| --- | --- |
+| `POINT` | `1.00` |
+| `HD II Online` | `3.50` |
+| `Deon Online` | `310` |
+| `Bono Online` | `300` |
+| `INFIS` | `1.30` |
+
+This library has been personally verified on `POINT` firmware `1.00`.
+
+If you test against hardware outside this matrix, treat the result as useful
+exploration, not release evidence. If you test against hardware inside this
+matrix but other than `POINT` `1.00`, treat the result as vendor-declared
+compatibility unless you also record project-specific hardware evidence for that
+printer and firmware.
+
 ## Required environment
 
 Export the base URL before running any hardware tests:
