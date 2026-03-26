@@ -17,6 +17,10 @@ def test_ci_workflow_runs_quality_checks_and_build() -> None:
     assert 'astral-sh/setup-uv' in workflow
     assert 'uv sync --frozen --all-groups' in workflow
     assert 'uv run pre-commit run --all-files' in workflow
-    assert 'uv run pytest tests/contract tests/unit tests/integration -x' in workflow
-    assert 'uv build --no-sources' in workflow
+    assert 'uv run pytest tests/contract tests/unit tests/integration' in workflow
+    assert '--ignore=tests/unit/test_artifacts.py -x' in workflow
+    assert 'uv build --no-sources --clear' in workflow
     assert 'uv run pytest tests/unit/test_artifacts.py -x' in workflow
+    assert workflow.index('uv build --no-sources --clear') < workflow.index(
+        'uv run pytest tests/unit/test_artifacts.py -x'
+    )
